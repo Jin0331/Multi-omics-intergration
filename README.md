@@ -1,2 +1,2 @@
-# Multi-omics-intergration
-Multi-omics-intergration
+# Multi-Omics-Integration
+Multi-Omics-Integration

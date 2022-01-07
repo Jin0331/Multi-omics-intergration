@@ -2,6 +2,7 @@ RAW_DATA/
 RData/
 models/
 OmiEmbed/
+pkl/
 
 # History files
 .Rhistory

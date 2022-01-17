@@ -3,6 +3,8 @@ RData/
 models/
 OmiEmbed/
 pkl/
+log/
+src/.ipynb_checkpoints/
 
 # History files
 .Rhistory

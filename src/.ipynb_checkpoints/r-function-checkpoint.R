@@ -6,10 +6,10 @@ library(survival)
 library(survminer)
 
 # KM - plot
-km_survival <- function(df, file_name){
+km_survival <- function(df, file_name, path){
     fit <- survfit(Surv(time = OS.time, event = OS) ~ group, data = df)
     ggsurvplot(fit, data = df, pval = T, conf.int = T, title = file_name)
-    ggsave(paste0(file_name, "_AE_km_plot.png"), )
+    ggsave(paste0(path, file_name, "_AE_km_plot.png"), )
 }    
 
 # log-rank test

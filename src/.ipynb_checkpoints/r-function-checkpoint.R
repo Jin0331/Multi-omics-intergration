@@ -2,6 +2,15 @@ library(tidyverse)
 library(survival)
 library(ranger)
 library(NbClust)
+library(survival)
+library(survminer)
+
+# KM - plot
+km_survival <- function(df, file_name){
+    fit <- survfit(Surv(time = OS.time, event = OS) ~ group, data = df)
+    ggsurvplot(fit, data = df, pval = T, conf.int = T, title = file_name)
+    ggsave("temp.png")
+}
 
 # log-rank test
 log_rank_test <- function(df){   

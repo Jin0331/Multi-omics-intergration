@@ -1,10 +1,19 @@
+# install.package
+requiredPackages <- c('magrittr','survival','ranger', 'NbClust', 'survminer', 'tibble', 'stringr', 'ggplot2', 'dplyr')
+for(p in requiredPackages){
+  if(!require(p,character.only = TRUE)){install.packages(p)}}
+    
+# library load
 suppressPackageStartupMessages({
-    library(tidyverse)
+    library(magrittr)
     library(survival)
     library(ranger)
     library(NbClust)
-    library(survival)
     library(survminer)
+    library(tibble)
+    library(stringr)
+    library(ggplot2)
+    library(dplyr)
 })
 
 # KM - plot

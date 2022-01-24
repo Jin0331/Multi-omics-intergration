@@ -13,7 +13,8 @@ conda env create --file conda_env.yaml
 conda activate multiomics
 
 <CPU>
-
+conda env create --file conda_env_cpu.yaml
+conda activate multiomics-cpu
 
 <tensorboard>
 tensorboard --logdir=tb_log --bind_all

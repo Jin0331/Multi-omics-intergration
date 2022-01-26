@@ -5,6 +5,7 @@ OmiEmbed/
 pkl/
 log/
 src/.ipynb_checkpoints/
+GDCdata/
 
 # History files
 .Rhistory

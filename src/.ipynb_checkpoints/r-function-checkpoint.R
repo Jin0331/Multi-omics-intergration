@@ -1,10 +1,10 @@
 # install.package
-requiredPackages <- c('survival','ranger', 'NbClust', 'survminer', 'tidyverse', 'BiocManager')
-for(p in requiredPackages){
-    if(!require(p,character.only = TRUE)){install.packages(p)}}
+# requiredPackages <- c('survival','ranger', 'NbClust', 'survminer', 'tidyverse')
+# for(p in requiredPackages){
+#     if(!require(p,character.only = TRUE)){install.packages(p)}}
 
-for(p in c("TCGAbiolinks", "SummarizedExperiment")){
-    if(!require(p,character.only = TRUE)){BiocManager::install(p)}}
+# for(p in c("TCGAbiolinks", "SummarizedExperiment")){
+#     if(!require(p,character.only = TRUE)){BiocManager::install(p)}}
 
 # library load
 suppressPackageStartupMessages({

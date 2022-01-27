@@ -1,8 +1,9 @@
 name: multiomics-cpu
 channels:
   - bioconda
-  - defaults
   - conda-forge
+  - r
+  - defaults
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=1_gnu
@@ -22,20 +23,36 @@ dependencies:
   - backports.zoneinfo=0.2.1=py38h497a2fe_4
   - binutils_impl_linux-64=2.36.1=h193b22a_2
   - binutils_linux-64=2.36=hf3e587d_4
+  - bioconductor-annotate=1.72.0=r41hdfd78af_0
   - bioconductor-annotationdbi=1.56.1=r41hdfd78af_0
+  - bioconductor-aroma.light=3.24.0=r41hdfd78af_0
   - bioconductor-biobase=2.54.0=r41hd029910_0
   - bioconductor-biocfilecache=2.2.0=r41hdfd78af_0
   - bioconductor-biocgenerics=0.40.0=r41hdfd78af_0
+  - bioconductor-biocio=1.4.0=r41hdfd78af_0
+  - bioconductor-biocparallel=1.28.0=r41h399db7b_0
   - bioconductor-biomart=2.50.0=r41hdfd78af_0
   - bioconductor-biostrings=2.62.0=r41hd029910_0
   - bioconductor-delayedarray=0.20.0=r41hd029910_0
+  - bioconductor-deseq2=1.34.0=r41h399db7b_0
+  - bioconductor-edaseq=2.28.0=r41hdfd78af_0
+  - bioconductor-edger=3.36.0=r41h399db7b_0
+  - bioconductor-genefilter=1.76.0=r41hba52eb8_0
+  - bioconductor-geneplotter=1.72.0=r41hdfd78af_0
   - bioconductor-genomeinfodb=1.30.0=r41hdfd78af_0
   - bioconductor-genomeinfodbdata=1.2.7=r41hdfd78af_1
+  - bioconductor-genomicalignments=1.30.0=r41hd029910_0
+  - bioconductor-genomicfeatures=1.46.1=r41hdfd78af_0
   - bioconductor-genomicranges=1.46.0=r41hd029910_0
   - bioconductor-iranges=2.28.0=r41hd029910_0
   - bioconductor-keggrest=1.34.0=r41hdfd78af_0
+  - bioconductor-limma=3.50.0=r41hd029910_0
   - bioconductor-matrixgenerics=1.6.0=r41hdfd78af_0
+  - bioconductor-rhtslib=1.26.0=r41hd029910_0
+  - bioconductor-rsamtools=2.10.0=r41h399db7b_0
+  - bioconductor-rtracklayer=1.54.0=r41hd029910_0
   - bioconductor-s4vectors=0.32.0=r41hd029910_0
+  - bioconductor-shortread=1.52.0=r41h399db7b_0
   - bioconductor-summarizedexperiment=1.24.0=r41hdfd78af_0
   - bioconductor-tcgabiolinks=2.22.1=r41hdfd78af_0
   - bioconductor-tcgabiolinksgui.data=1.14.0=r41hdfd78af_0
@@ -190,6 +207,8 @@ dependencies:
   - r-backports=1.4.1=r41hcfec24a_0
   - r-base=4.1.2=hde4fec0_0
   - r-base64enc=0.1_3=r41hcfec24a_1004
+  - r-bh=1.78.0_0=r41hc72bb7e_0
+  - r-biocmanager=1.30.16=r41hc72bb7e_0
   - r-bit=4.0.4=r41hcfec24a_0
   - r-bit64=4.0.5=r41hcfec24a_0
   - r-bitops=1.0_7=r41hcfec24a_0
@@ -234,7 +253,10 @@ dependencies:
   - r-forcats=0.5.1=r41hc72bb7e_0
   - r-foreach=1.5.1=r41hc72bb7e_0
   - r-foreign=0.8_82=r41hcfec24a_0
+  - r-formatr=1.11=r41hc72bb7e_0
   - r-fs=1.5.2=r41h03ef668_0
+  - r-futile.logger=1.4.3=r41hc72bb7e_1003
+  - r-futile.options=1.0.1=r41hc72bb7e_1002
   - r-future=1.23.0=r41hc72bb7e_0
   - r-future.apply=1.8.1=r41hc72bb7e_0
   - r-gargle=1.2.0=r41hc72bb7e_0
@@ -258,6 +280,7 @@ dependencies:
   - r-hms=1.1.1=r41hc72bb7e_0
   - r-htmltools=0.5.2=r41h03ef668_0
   - r-httr=1.4.2=r41hc72bb7e_0
+  - r-hwriter=1.3.2=r41hc72bb7e_1003
   - r-ids=1.0.1=r41hc72bb7e_1
   - r-ipred=0.9_12=r41hcfec24a_0
   - r-isoband=0.2.5=r41h03ef668_0
@@ -270,11 +293,14 @@ dependencies:
   - r-kmsurv=0.1_5=r41hc72bb7e_1003
   - r-knitr=1.37=r41hc72bb7e_1
   - r-labeling=0.4.2=r41hc72bb7e_1
+  - r-lambda.r=1.2.4=r41hc72bb7e_1
   - r-lattice=0.20_45=r41hcfec24a_0
+  - r-latticeextra=0.6_29=r41hc72bb7e_1
   - r-lava=1.6.10=r41hc72bb7e_0
   - r-lifecycle=1.0.1=r41hc72bb7e_0
   - r-listenv=0.8.0=r41hc72bb7e_1
   - r-lme4=1.1_27.1=r41h03ef668_0
+  - r-locfit=1.5_9.4=r41hcfec24a_1
   - r-lubridate=1.8.0=r41h03ef668_0
   - r-magrittr=2.0.1=r41hcfec24a_1
   - r-maptools=1.1_2=r41hcfec24a_0
@@ -337,7 +363,9 @@ dependencies:
   - r-rematch2=2.1.2=r41hc72bb7e_1
   - r-reprex=2.0.1=r41hc72bb7e_0
   - r-reshape2=1.4.4=r41h03ef668_1
+  - r-restfulr=0.0.13=r41hdf9a8c9_1
   - r-rio=0.5.29=r41hc72bb7e_0
+  - r-rjson=0.2.21=r41h03ef668_0
   - r-rlang=0.4.12=r41hcfec24a_0
   - r-rmarkdown=2.11=r41hc72bb7e_1
   - r-rpart=4.1.16=r41hcfec24a_0
@@ -348,6 +376,7 @@ dependencies:
   - r-rvest=1.0.2=r41hc72bb7e_0
   - r-scales=1.1.1=r41hc72bb7e_0
   - r-selectr=0.4_2=r41hc72bb7e_1
+  - r-snow=0.4_4=r41hc72bb7e_0
   - r-sp=1.4_6=r41hcfec24a_0
   - r-sparsem=1.81=r41h859d828_0
   - r-squarem=2021.1=r41hc72bb7e_0
@@ -465,4 +494,4 @@ dependencies:
     - tornado==6.1
     - traitlets==5.1.1
     - wcwidth==0.2.5
-prefix: /home/km/anaconda3/envs/multiomics-cpu
+prefix: /home/wmbio/anaconda3/envs/multiomics-cpu

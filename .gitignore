@@ -4,6 +4,10 @@ models/
 OmiEmbed/
 pkl/
 log/
+group/
+group_validation/
+png/
+deg/
 src/.ipynb_checkpoints/
 GDCdata/
 

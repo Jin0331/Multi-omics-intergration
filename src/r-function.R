@@ -343,3 +343,36 @@ run_deseq_pancan <- function(sample_group_path, involve_brca){
   
   return(tcga_deseq_result)
 }
+stand_alone_deg <- function(cancer_type, subgroup_path, deg_path){
+  subgroup_file_list <- list.files(subgroup_path)
+  
+  for(value in subgroup_file_list){
+    file_name_group <- value %>% 
+      str_extract_all(string = ., pattern = "[:digit:]+-[:digit:]+")
+    
+    # LIHC_DESEQ2_20220127-120900.txt
+    file_name_deg <- paste0(cancer_type, "_EDGER_DEG_", file_name_group, ".txt")
+    
+    # file check
+    if(!(file_name_deg %in% list.files(deg_path))){
+      print(value)
+      edger <- run_edgeR(cancer_type, paste0(subgroup_path, value)) %>% 
+        mutate(mRNA = mRNA[,1])
+      deseq <- run_deseq(cancer_type, paste0(subgroup_path, value))
+    }
+    
+    # table writing
+    edger %>% as_tibble() %>% 
+      write_delim(file = paste0(deg_path, cancer_type, "_EDGER_", file_name_group, ".txt"), delim = "\t")
+    edger %>% as_tibble() %>% 
+      select_at(1) %>% 
+      write_delim(file = paste0(deg_path, cancer_type, "_EDGER_DEG_", file_name_group, ".txt"), delim = "\t")
+    
+    deseq %>% as_tibble() %>% 
+      write_delim(file = paste0(deg_path, cancer_type, "_DESEQ2_", file_name_group, ".txt"), delim = "\t")
+    deseq %>% as_tibble() %>% 
+      select_at(1) %>% 
+      write_delim(file = paste0(deg_path, cancer_type, "_DESEQ2_DEG_", file_name_group, ".txt"), delim = "\t")
+    
+  }
+}

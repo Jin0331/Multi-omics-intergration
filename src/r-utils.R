@@ -242,13 +242,13 @@ stand_alone_deg <- function(cancer_type, subgroup_path, deg_path){
       write_delim(file = paste0(deg_path, cancer_type, "_EDGER_", file_name_group, ".txt"), delim = "\t")
     edger %>% as_tibble() %>% 
       select_at(1) %>% 
-      write_delim(file = paste0(deg_path, cancer_type, "_EDGER_DEG", file_name_group, ".txt"), delim = "\t")
+      write_delim(file = paste0(deg_path, cancer_type, "_EDGER_DEG_", file_name_group, ".txt"), delim = "\t")
     
     deseq %>% as_tibble() %>% 
       write_delim(file = paste0(deg_path, cancer_type, "_DESEQ2_", file_name_group, ".txt"), delim = "\t")
     deseq %>% as_tibble() %>% 
       select_at(1) %>% 
-      write_delim(file = paste0(deg_path, cancer_type, "_DESEQ2__DEG", file_name_group, ".txt"), delim = "\t")
+      write_delim(file = paste0(deg_path, cancer_type, "_DESEQ2_DEG_", file_name_group, ".txt"), delim = "\t")
     
   }
 }

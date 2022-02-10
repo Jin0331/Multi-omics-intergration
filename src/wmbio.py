@@ -440,6 +440,24 @@ def log_test(df):
     
     return feature_log
 
+# pandas DF to R DF
+def group_convert(sample_group):           
+    r = ro.r
+    r['source']('src/r-function.R')
+    survFit_r = ro.globalenv['survFit']
+    survFit_result = survFit_r(sample_group)
+    
+    # R DF to pandas DF
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        survFit_result = ro.conversion.rpy2py(survFit_result)
+    
+    # group 0
+    if survFit_result.iloc[0, 4] > survFit_result.iloc[1, 4]:
+        return False
+    else:
+        return True
+
+
 def log_rank_test(df, png_path, file_name):
     group_size = len(set(df.loc[:, ["group"]].iloc[:,0].to_list()))
     labels = ["G" + str(index) for index in range(group_size)]
@@ -501,7 +519,7 @@ def nb_cluster(df):
     return omic_encoded_fc_r
 
 # invoke r
-def survfit(df, file_name, PNG_PATH):
+def survfit(df, file_name):
     # pandas DF to R DF
     with localconverter(ro.default_converter + pandas2ri.converter):
         r_from_pd_df = ro.conversion.py2rpy(df)
@@ -803,14 +821,16 @@ def deg_extract(log_fc, fdr, cancer_type, sample_group, deg_path, file_name):
     run_edgeR_r = ro.globalenv['run_edgeR']
     run_deseq_r = ro.globalenv['run_deseq']
     
+    group_reverse = group_convert(sample_group)
+    
     # R DF to pandas DF
     ## EdgeR
-    edger = run_edgeR_r(cancer_type, sample_group)
+    edger = run_edgeR_r(cancer_type, sample_group, group_reverse)
     with localconverter(ro.default_converter + pandas2ri.converter):
         edger = ro.conversion.rpy2py(edger)
         
     ## Deseq2
-    deseq = run_deseq_r(cancer_type, sample_group)
+    deseq = run_deseq_r(cancer_type, sample_group, group_reverse)
     with localconverter(ro.default_converter + pandas2ri.converter):
         deseq = ro.conversion.rpy2py(deseq)
     

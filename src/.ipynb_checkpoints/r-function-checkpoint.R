@@ -10,12 +10,20 @@ suppressPackageStartupMessages({
   library(DESeq2)
 })
 
-# KM - plot
-km_survival <- function(df, file_name, path){
-  fit <- survfit(Surv(time = OS.time, event = OS) ~ group, data = df)
-  ggsurvplot(fit, data = df, pval = T, conf.int = T, title = file_name)
-  ggsave(paste0(path, file_name, "_AE_km_plot.png"), )
-}    
+survFit <- function(sample_group_path){
+  
+  sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+  
+  # surv data
+  pheno <- read_delim("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
+                      col_select = c('sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'),
+                      delim = "\t", show_col_types = FALSE)
+  sample_group_surv <- left_join(x = sample_group, y = pheno, by = "sample")
+  
+  fit <- survfit(Surv(time = OS.time, event = OS) ~ group, data = sample_group_surv)
+  summary(fit)$table %>% as.data.frame() %>%
+    return()
+}  
 
 # log-rank test
 log_rank_test <- function(df){   
@@ -46,10 +54,14 @@ nb_cluster_test <- function(df){
 }
 
 # function
-run_edgeR <- function(pr_name, sample_group_path){
+run_edgeR <- function(pr_name, sample_group_path, group_reverse){
   
   suppressMessages({
     sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+    
+    # group convert
+    if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
+    
     query <- GDCquery(project = paste0("TCGA-", pr_name), 
                       data.category = "Gene expression",
                       data.type = "Gene expression quantification",
@@ -112,8 +124,12 @@ run_edgeR <- function(pr_name, sample_group_path){
   
   return(dataDEGsFiltLevel)
 }
-run_edgeR_pancan <- function(sample_group_path, involve_brca){
-  sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)    
+run_edgeR_pancan <- function(sample_group_path, involve_brca, group_reverse){
+  sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+    
+  # group convert
+  if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
+    
   study_list <- tcga_available()$Study_Abbreviation[-34] %>% 
     lapply(X = ., FUN = function(value){
       paste0("TCGA-", value) %>% return()
@@ -221,10 +237,14 @@ run_edgeR_pancan <- function(sample_group_path, involve_brca){
   
   return(dataDEGsFiltLevel)
 }
-run_deseq <- function(pr_name, sample_group_path){
+run_deseq <- function(pr_name, sample_group_path, group_reverse){
   
   suppressMessages({
     sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+      
+    # group convert
+    if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}  
+    
     query <- GDCquery(project = paste0("TCGA-", pr_name), 
                       data.category = "Gene expression",
                       data.type = "Gene expression quantification",
@@ -261,8 +281,12 @@ run_deseq <- function(pr_name, sample_group_path){
   
   return(tcga_deseq_result)
 }
-run_deseq_pancan <- function(sample_group_path, involve_brca){
-  sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)    
+run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse){
+  sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+    
+  # group convert
+  if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
+    
   study_list <- tcga_available()$Study_Abbreviation[-34] %>% 
     lapply(X = ., FUN = function(value){
       paste0("TCGA-", value) %>% return()

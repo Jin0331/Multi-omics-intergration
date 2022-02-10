@@ -8,6 +8,7 @@ suppressPackageStartupMessages({
   library(TCGAbiolinks)
   library(SummarizedExperiment)
   library(DESeq2)
+  library(BiocParallel)
 })
 
 survFit <- function(sample_group_path){
@@ -238,7 +239,7 @@ run_edgeR_pancan <- function(sample_group_path, involve_brca, group_reverse){
   return(dataDEGsFiltLevel)
 }
 run_deseq <- function(pr_name, sample_group_path, group_reverse){
-  
+  register(MulticoreParam(20))
   suppressMessages({
     sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
       
@@ -271,7 +272,7 @@ run_deseq <- function(pr_name, sample_group_path, group_reverse){
       mutate(group = as.factor(ifelse(group == 0, "Sub0", "Sub1")))
     
     tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
-    tcga_deseq <- DESeq(tcga_se)
+    tcga_deseq <- DESeq(tcga_se, parallel = TRUE)
     
     tcga_deseq_result <- results(tcga_deseq, tidy = T)
     
@@ -282,6 +283,7 @@ run_deseq <- function(pr_name, sample_group_path, group_reverse){
   return(tcga_deseq_result)
 }
 run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse){
+  register(MulticoreParam(10))
   sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
     
   # group convert

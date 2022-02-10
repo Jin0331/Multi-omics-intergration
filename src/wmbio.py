@@ -815,7 +815,7 @@ def feature_selection_svm(data_type, o):
         
     return feature_result
 
-def deg_extract(log_fc, fdr, cancer_type, sample_group, deg_path, file_name):
+def deg_extract(log_fc, fdr, cancer_type, sample_group, deg_path, file_name, method):
     r = ro.r
     r['source']('src/r-function.R')
     run_edgeR_r = ro.globalenv['run_edgeR']
@@ -824,31 +824,61 @@ def deg_extract(log_fc, fdr, cancer_type, sample_group, deg_path, file_name):
     group_reverse = group_convert(sample_group)
     
     # R DF to pandas DF
-    ## EdgeR
-    edger = run_edgeR_r(cancer_type, sample_group, group_reverse)
-    with localconverter(ro.default_converter + pandas2ri.converter):
-        edger = ro.conversion.rpy2py(edger)
-        
-    ## Deseq2
-    deseq = run_deseq_r(cancer_type, sample_group, group_reverse)
-    with localconverter(ro.default_converter + pandas2ri.converter):
-        deseq = ro.conversion.rpy2py(deseq)
-    
-    # DEG list
-    edger_filter = ((edger.logFC <= -(log_fc)) | (edger.logFC >= log_fc)) & (edger.FDR < fdr)
-    deseq_filter = ((deseq.log2FoldChange <= -(log_fc)) | (deseq.log2FoldChange >= log_fc)) & (deseq.padj < fdr)
-    edger_deg = edger.loc[edger_filter, :].loc[:, "mRNA"]
-    deseq_deg = deseq.loc[deseq_filter, :].loc[:, "row"]
-    
-    # write table
     Path(deg_path).mkdir(parents=True, exist_ok=True)
-    edger.to_csv(deg_path + cancer_type + "_EDGER_" + file_name + ".txt", sep = "\t", index = False)
-    deseq.to_csv(deg_path + cancer_type + "_DESEQ2_" + file_name + ".txt", sep = "\t", index = False)
-    edger_deg.to_csv(deg_path + cancer_type + "_EDGER_DEG_" + file_name + ".txt", sep = "\t", index = False)
-    deseq_deg.to_csv(deg_path + cancer_type + "_DESEQ2_DEG_" + file_name + ".txt", sep = "\t", index = False)
+    ## EdgeR
+    if method == "edger" or method == "all":
+        edger = run_edgeR_r(cancer_type, sample_group, group_reverse)
+        with localconverter(ro.default_converter + pandas2ri.converter):
+            edger = ro.conversion.rpy2py(edger)
+        
+        # DEG list
+        edger_filter = ((edger.logFC <= -(log_fc)) | (edger.logFC >= log_fc)) & (edger.FDR < fdr)
+        edger = edger.loc[edger_filter, :]
+        edger.to_csv(deg_path + cancer_type + "_EDGER_" + file_name + ".txt", sep = "\t", index = False)
     
-    return (edger_deg, deseq_deg)
+    if method == "deseq2" or method == "all":
+    ## Deseq2
+        deseq = run_deseq_r(cancer_type, sample_group, group_reverse)
+        with localconverter(ro.default_converter + pandas2ri.converter):
+            deseq = ro.conversion.rpy2py(deseq)
+        
+        # DEG list
+        deseq_filter = ((deseq.log2FoldChange <= -(log_fc)) | (deseq.log2FoldChange >= log_fc)) & (deseq.padj < fdr)
+        deseq = deseq.loc[deseq_filter, :]
+        deseq.to_csv(deg_path + cancer_type + "_DESEQ2_" + file_name + ".txt", sep = "\t", index = False)
+    
+    if method == "deseq2":
+        return [deseq]
+    elif method == "edger":
+        return [edger]
+    else:
+        return [edger, deseq]
+
+# Analysis
+def deseq2_edger_combine(df):
+    e = df[0]
+    d = df[1]
+    
+    e_col = ["gene", "EdgeR-logFC", "EdgeR-FDR"]
+    d_col = ["gene", "Deseq2-logFC", "Deseq2-FDR"]
+    
+    e = e[["mRNA", "logFC", "FDR"]]
+    d = d[["row", "log2FoldChange", "padj"]]
+    # rename column
+    e.columns = e_col
+    d.columns = d_col
+    
+    return pd.merge(e, d, left_on='gene', right_on='gene', how='outer')
+
+def col_rename(df, num):
+    change_col = df.columns.to_list()[1:]
+    change_col = ["gene"] + ["Fold-" + str(num + 1) + "_" + value for value in change_col]
+    df.columns = change_col
+    
+    return df
+    
 
 
 if __name__ == "__main__": 
     print("moduel.py")
+    

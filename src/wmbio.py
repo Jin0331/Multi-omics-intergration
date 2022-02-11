@@ -815,7 +815,7 @@ def feature_selection_svm(data_type, o):
         
     return feature_result
 
-def deg_extract(log_fc, fdr, cancer_type, sample_group, deg_path, file_name, method):
+def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_name, rdata_path):
     r = ro.r
     r['source']('src/r-function.R')
     run_edgeR_r = ro.globalenv['run_edgeR']
@@ -825,9 +825,11 @@ def deg_extract(log_fc, fdr, cancer_type, sample_group, deg_path, file_name, met
     
     # R DF to pandas DF
     Path(deg_path).mkdir(parents=True, exist_ok=True)
+    Path(rdata_path).mkdir(parents=True, exist_ok=True)
+    
     ## EdgeR
     if method == "edger" or method == "all":
-        edger = run_edgeR_r(cancer_type, sample_group, group_reverse)
+        edger = run_edgeR_r(cancer_type, sample_group, rdata_path, group_reverse)
         with localconverter(ro.default_converter + pandas2ri.converter):
             edger = ro.conversion.rpy2py(edger)
         
@@ -838,7 +840,7 @@ def deg_extract(log_fc, fdr, cancer_type, sample_group, deg_path, file_name, met
     
     if method == "deseq2" or method == "all":
     ## Deseq2
-        deseq = run_deseq_r(cancer_type, sample_group, group_reverse)
+        deseq = run_deseq_r(cancer_type, sample_group, rdata_path, group_reverse)
         with localconverter(ro.default_converter + pandas2ri.converter):
             deseq = ro.conversion.rpy2py(deseq)
         
@@ -848,9 +850,9 @@ def deg_extract(log_fc, fdr, cancer_type, sample_group, deg_path, file_name, met
         deseq.to_csv(deg_path + cancer_type + "_DESEQ2_" + file_name + ".txt", sep = "\t", index = False)
     
     if method == "deseq2":
-        return [deseq]
+        return deseq
     elif method == "edger":
-        return [edger]
+        return edger
     else:
         return [edger, deseq]
 
@@ -859,11 +861,11 @@ def deseq2_edger_combine(df):
     e = df[0]
     d = df[1]
     
-    e_col = ["gene", "EdgeR-logFC", "EdgeR-FDR"]
-    d_col = ["gene", "Deseq2-logFC", "Deseq2-FDR"]
+    e_col = ["gene", "EdgeR-logFC"]
+    d_col = ["gene", "Deseq2-logFC"]
     
-    e = e[["mRNA", "logFC", "FDR"]]
-    d = d[["row", "log2FoldChange", "padj"]]
+    e = e[["mRNA", "logFC"]]
+    d = d[["row", "log2FoldChange"]]
     # rename column
     e.columns = e_col
     d.columns = d_col

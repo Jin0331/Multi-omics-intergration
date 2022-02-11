@@ -62,19 +62,35 @@ run_edgeR <- function(pr_name, sample_group_path, group_reverse){
     
     # group convert
     if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
-    
-    query <- GDCquery(project = paste0("TCGA-", pr_name), 
-                      data.category = "Gene expression",
-                      data.type = "Gene expression quantification",
-                      experimental.strategy = "RNA-Seq",
-                      platform = "Illumina HiSeq",
-                      file.type = "results",
-                      barcode = sample_group %>% pull(1), 
-                      legacy = TRUE)
-    
-    GDCdownload(query)
-    RnaseqSE <- GDCprepare(query)
-    Rnaseq_CorOutliers <- assay(RnaseqSE)
+    if((!file.exists(paste0(rdata_path, pr_name, ".RData"))) | 
+       (!file.exists(paste0(rdata_path, pr_name, "_RnaseqSE.RData")))){
+        query <- GDCquery(project = paste0("TCGA-", pr_name), 
+                          data.category = "Gene expression",
+                          data.type = "Gene expression quantification",
+                          experimental.strategy = "RNA-Seq",
+                          platform = "Illumina HiSeq",
+                          file.type = "results",
+                          barcode = sample_group %>% pull(1), 
+                          legacy = TRUE)
+
+        GDCdownload(query)
+        RnaseqSE <- GDCprepare(query)
+        
+        save(RnaseqSE, file = paste0(rdata_path, pr_name, "_RnaseqSE.RData"))
+        
+        Rnaseq_CorOutliers <- assay(RnaseqSE) # to matrix
+
+        # normalization of genes, # quantile filter of genes
+        dataNorm <- TCGAanalyze_Normalization(tabDF = Rnaseq_CorOutliers, geneInfo =  geneInfo)
+        dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
+                                          method = "quantile", 
+                                          qnt.cut =  0.25)
+        
+        save(dataFilt, file = paste0(rdata_path, pr_name, ".RData"))
+    } else {
+        load(paste0(rdata_path, pr_name, "_RnaseqSE.RData"))
+        load(paste0(rdata_path, pr_name, ".RData"))
+    }
     
     # subgroup names
     sub0 <- sample_group %>% filter(group == 0) %>% pull(1)
@@ -98,14 +114,6 @@ run_edgeR <- function(pr_name, sample_group_path, group_reverse){
     
     sub0_name <- sample_subgroup %>% filter(subgroup == 0) %>% pull(sample_barcode)
     sub1_name <- sample_subgroup %>% filter(subgroup == 1) %>% pull(sample_barcode)
-    
-    # normalization of genes
-    dataNorm <- TCGAanalyze_Normalization(tabDF = Rnaseq_CorOutliers, geneInfo =  geneInfo)
-    
-    # quantile filter of genes
-    dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
-                                      method = "quantile", 
-                                      qnt.cut =  0.25)
     
     #Diff.expr.analysis (DEA)
     dataDEGs <- TCGAanalyze_DEA(mat1 = dataFilt[,sub0_name],
@@ -238,7 +246,7 @@ run_edgeR_pancan <- function(sample_group_path, involve_brca, group_reverse){
   
   return(dataDEGsFiltLevel)
 }
-run_deseq <- function(pr_name, sample_group_path, group_reverse){
+run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse){
   register(MulticoreParam(20))
   suppressMessages({
     sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
@@ -246,25 +254,37 @@ run_deseq <- function(pr_name, sample_group_path, group_reverse){
     # group convert
     if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}  
     
-    query <- GDCquery(project = paste0("TCGA-", pr_name), 
-                      data.category = "Gene expression",
-                      data.type = "Gene expression quantification",
-                      experimental.strategy = "RNA-Seq",
-                      platform = "Illumina HiSeq",
-                      file.type = "results",
-                      barcode = sample_group %>% pull(1), 
-                      legacy = TRUE)
-    
-    GDCdownload(query)
-    RnaseqSE <- GDCprepare(query)
-    Rnaseq_CorOutliers <- assay(RnaseqSE) # to matrix
-    
-    # normalization of genes, # quantile filter of genes
-    dataNorm <- TCGAanalyze_Normalization(tabDF = Rnaseq_CorOutliers, geneInfo =  geneInfo)
-    dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
-                                      method = "quantile", 
-                                      qnt.cut =  0.25)
-    
+    if((!file.exists(paste0(rdata_path, pr_name, ".RData"))) | 
+       (!file.exists(paste0(rdata_path, pr_name, "_RnaseqSE.RData")))){
+        query <- GDCquery(project = paste0("TCGA-", pr_name), 
+                          data.category = "Gene expression",
+                          data.type = "Gene expression quantification",
+                          experimental.strategy = "RNA-Seq",
+                          platform = "Illumina HiSeq",
+                          file.type = "results",
+                          barcode = sample_group %>% pull(1), 
+                          legacy = TRUE)
+
+        GDCdownload(query)
+        RnaseqSE <- GDCprepare(query)
+        
+        save(RnaseqSE, file = paste0(rdata_path, pr_name, "_RnaseqSE.RData"))
+        
+        Rnaseq_CorOutliers <- assay(RnaseqSE) # to matrix
+
+        # normalization of genes, # quantile filter of genes
+        dataNorm <- TCGAanalyze_Normalization(tabDF = Rnaseq_CorOutliers, geneInfo =  geneInfo)
+        dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
+                                          method = "quantile", 
+                                          qnt.cut =  0.25)
+        
+        save(dataFilt, file = paste0(rdata_path, pr_name, ".RData"))
+    } else {
+        load(paste0(rdata_path, pr_name, "_RnaseqSE.RData"))
+        load(paste0(rdata_path, pr_name, ".RData"))
+    }
+
+
     # metadata
     metadata <- tibble(sample = RnaseqSE$sample_submitter_id, barcode = RnaseqSE$barcode) %>% 
       mutate(sample = str_extract_all(sample, pattern = "TCGA-[:alnum:]+-[:alnum:]+-[:digit:]+") %>% unlist()) %>% 
@@ -283,7 +303,7 @@ run_deseq <- function(pr_name, sample_group_path, group_reverse){
   return(tcga_deseq_result)
 }
 run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse){
-  register(MulticoreParam(10))
+  register(MulticoreParam(5))
   sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
     
   # group convert

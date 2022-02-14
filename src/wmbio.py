@@ -855,6 +855,24 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
         return edger
     else:
         return [edger, deseq]
+    
+def deg_extract_normal(log_fc, pvalue, cancer_type, rdata_path, deg_path):
+    r = ro.r
+    r['source']('src/r-function.R')
+    run_deseq2_normal_r = ro.globalenv['run_deseq_normal']
+    
+    # R DF to pandas DF
+    Path(rdata_path).mkdir(parents=True, exist_ok=True)
+    
+    deseq = run_deseq2_normal_r(cancer_type, rdata_path, deg_path)
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        deseq = ro.conversion.rpy2py(deseq)
+
+    # DEG list
+    deseq_filter = ((deseq.log2FoldChange <= -(log_fc)) | (deseq.log2FoldChange >= log_fc)) & (deseq.pvalue < pvalue)
+    deseq = deseq.loc[deseq_filter, :]
+    
+    return deseq
 
 # Analysis
 def deseq2_edger_combine(df):

@@ -247,6 +247,80 @@ run_edgeR_pancan <- function(sample_group_path, involve_brca, group_reverse){
   
   return(dataDEGsFiltLevel)
 }
+
+run_deseq_normal <- function(pr_name, rdata_path, deg_path){
+  register(MulticoreParam(20))
+  suppressMessages({
+    if((!file.exists(paste0(rdata_path, pr_name, "_normal.RData"))) | 
+       (!file.exists(paste0(rdata_path, pr_name, "_RnaseqSE_normal.RData")))){
+      query <- GDCquery(project = paste0("TCGA-", pr_name), 
+                        data.category = "Gene expression",
+                        data.type = "Gene expression quantification",
+                        experimental.strategy = "RNA-Seq",
+                        platform = "Illumina HiSeq",
+                        file.type = "results",
+                        sample.type = c("Primary Tumor", "Solid Tissue Normal"), 
+                        legacy = TRUE)
+
+      GDCdownload(query)
+      RnaseqSE <- GDCprepare(query)
+
+      save(RnaseqSE, file = paste0(rdata_path, pr_name, "_RnaseqSE_normal.RData"))
+
+      Rnaseq_CorOutliers <- assay(RnaseqSE) # to matrix
+
+      # normalization of genes, # quantile filter of genes
+      dataNorm <- TCGAanalyze_Normalization(tabDF = Rnaseq_CorOutliers, geneInfo =  geneInfo)
+      dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
+                                        method = "quantile", 
+                                        qnt.cut =  0.25)
+
+      save(dataFilt, file = paste0(rdata_path, pr_name, "_normal.RData"))
+    } else {
+      load(paste0(rdata_path, pr_name, "_RnaseqSE_normal.RData"))
+      load(paste0(rdata_path, pr_name, "_normal.RData"))
+    }
+
+
+    # selection of normal samples "NT"
+    samplesNT <- TCGAquery_SampleTypes(barcode = colnames(dataFilt), typesample = c("NT")) %>% 
+      as_tibble() %>% 
+      mutate(group = 0) %>% 
+      dplyr::rename(sample = value)
+
+    # selection of tumor samples "TP"
+    samplesTP <- TCGAquery_SampleTypes(barcode = colnames(dataFilt), typesample = c("TP")) %>% 
+      as_tibble() %>% 
+      mutate(group = 1) %>% 
+      dplyr::rename(sample = value)
+
+    metadata <- bind_rows(samplesNT, samplesTP) %>% 
+      mutate(group = ifelse(group == 0, "NT", "TP"))
+    metadata$group <- factor(metadata$group, levels = c("NT", "TP"))
+
+    tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
+    tcga_deseq <- DESeq(tcga_se, parallel = TRUE)
+
+    tcga_deseq_result <- results(tcga_deseq, contrast=c("group", "TP", "NT"))
+    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "TP", "NT"))
+    
+    # volcano plot
+    p <- EnhancedVolcano(tcga_deseq_result,
+                    lab = rownames(tcga_deseq_result),
+                    x = 'log2FoldChange',
+                    y = 'padj',
+                    title = 'Primary Tumor versus Solid Tissue Normal',
+                    pCutoff = 0.05,
+                    FCcutoff = 1.5,
+                    pointSize = 3.0,
+                    labSize = 6.0)
+
+    ggsave(plot = p, filename = paste0(deg_path, pr_name, "_DESEQ2_normal_volcano.png"), height = 8, width = 12, dpi = 70)    
+  })  
+  
+  return(tcga_deseq_result_tidy)
+}
+
 run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, file_name, deg_path){
   register(MulticoreParam(20))
   suppressMessages({

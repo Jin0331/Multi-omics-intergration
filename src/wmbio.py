@@ -872,9 +872,9 @@ def deseq2_edger_combine(df):
     
     return pd.merge(e, d, left_on='gene', right_on='gene', how='outer')
 
-def col_rename(df, num):
+def col_rename(df, num, bs):
     change_col = df.columns.to_list()[1:]
-    change_col = ["gene"] + ["SubGroup-" + str(num + 1) + "_" + value for value in change_col]
+    change_col = ["gene"] + ["SubGroup-" + bs[num] + "_" + value for value in change_col]
     df.columns = change_col
     
     return df

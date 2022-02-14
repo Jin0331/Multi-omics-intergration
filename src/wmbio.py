@@ -840,7 +840,7 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
     
     if method == "deseq2" or method == "all":
     ## Deseq2
-        deseq = run_deseq_r(cancer_type, sample_group, rdata_path, group_reverse)
+        deseq = run_deseq_r(cancer_type, sample_group, rdata_path, group_reverse, file_name, deg_path)
         with localconverter(ro.default_converter + pandas2ri.converter):
             deseq = ro.conversion.rpy2py(deseq)
         
@@ -874,7 +874,7 @@ def deseq2_edger_combine(df):
 
 def col_rename(df, num):
     change_col = df.columns.to_list()[1:]
-    change_col = ["gene"] + ["Fold-" + str(num + 1) + "_" + value for value in change_col]
+    change_col = ["gene"] + ["SubGroup-" + str(num + 1) + "_" + value for value in change_col]
     df.columns = change_col
     
     return df

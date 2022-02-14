@@ -9,6 +9,7 @@ suppressPackageStartupMessages({
   library(SummarizedExperiment)
   library(DESeq2)
   library(BiocParallel)
+  library(EnhancedVolcano)
 })
 
 survFit <- function(sample_group_path){
@@ -246,7 +247,7 @@ run_edgeR_pancan <- function(sample_group_path, involve_brca, group_reverse){
   
   return(dataDEGsFiltLevel)
 }
-run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse){
+run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, file_name, deg_path){
   register(MulticoreParam(20))
   suppressMessages({
     sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
@@ -289,18 +290,30 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse){
     metadata <- tibble(sample = RnaseqSE$sample_submitter_id, barcode = RnaseqSE$barcode) %>% 
       mutate(sample = str_extract_all(sample, pattern = "TCGA-[:alnum:]+-[:alnum:]+-[:digit:]+") %>% unlist()) %>% 
       left_join(x = ., y = sample_group, by = "sample") %>% 
-      mutate(group = as.factor(ifelse(group == 0, "Sub0", "Sub1")))
+      mutate(group = ifelse(group == 0, "Sub0", "Sub1"))
+    metadata$group <- factor(metadata$group, levels = c("Sub0", "Sub1"))
     
     tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
     tcga_deseq <- DESeq(tcga_se, parallel = TRUE)
     
-    tcga_deseq_result <- results(tcga_deseq, tidy = T)
+    tcga_deseq_result <- results(tcga_deseq, contrast=c("group", "Sub1", "Sub0"))
+    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "Sub1", "Sub0"))
     
-    #   write_delim(tcga_deseq_result, file = paste0(dea_result_path, "_", pr_name, "_DESEQ2_", file_name, ".txt"), delim = "\t")
-    
+    # volcano plot
+    p <- EnhancedVolcano(tcga_deseq_result,
+                    lab = rownames(tcga_deseq_result),
+                    x = 'log2FoldChange',
+                    y = 'padj',
+                    title = 'SubGroup-0 versus SubGroup-1',
+                    pCutoff = 0.05,
+                    FCcutoff = 1.5,
+                    pointSize = 3.0,
+                    labSize = 6.0)
+
+    ggsave(plot = p, filename = paste0(deg_path, pr_name, "_DESEQ2_", file_name, "_volcano.png"), height = 8, width = 12, dpi = 70)    
   })  
   
-  return(tcga_deseq_result)
+  return(tcga_deseq_result_tidy)
 }
 run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse){
   register(MulticoreParam(5))
@@ -376,18 +389,31 @@ run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse){
     metadata <- tibble(sample = RnaseqSE$sample_submitter_id, barcode = RnaseqSE$barcode) %>% 
       mutate(sample = str_extract_all(sample, pattern = "TCGA-[:alnum:]+-[:alnum:]+-[:digit:]+") %>% unlist()) %>% 
       left_join(x = ., y = sample_group, by = "sample") %>% 
-      mutate(group = as.factor(ifelse(group == 0, "Sub0", "Sub1")))
+      mutate(group = ifelse(group == 0, "Sub0", "Sub1"))
+    metadata$group <- factor(metadata$group, levels = c("Sub0", "Sub1"))
     
     tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
     tcga_deseq <- DESeq(tcga_se)
     
-    tcga_deseq_result <- results(tcga_deseq, tidy = T)
+    tcga_deseq_result <- results(tcga_deseq, tidy = T, contrast=c("group", "Sub1", "Sub0"))
+    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "Sub1", "Sub0"))
     
-    #   write_delim(tcga_deseq_result, file = paste0(dea_result_path, "_", pr_name, "_DESEQ2_", file_name, ".txt"), delim = "\t")
+    # volcano plot
+    p <- EnhancedVolcano(tcga_deseq_result,
+                    lab = rownames(tcga_deseq_result),
+                    x = 'log2FoldChange',
+                    y = 'padj',
+                    title = 'SubGroup-0 versus SubGroup-1',
+                    pCutoff = 0.05,
+                    FCcutoff = 1.5,
+                    pointSize = 3.0,
+                    labSize = 6.0)
+
+    ggsave(plot = p, filename = paste0(deg_path, pr_name, "_DESEQ2_", file_name, "_volcano.png"), height = 8, width = 12, dpi = 70) 
     
   })  
   
-  return(tcga_deseq_result)
+  return(tcga_deseq_result_tidy)
 }
 stand_alone_deg <- function(cancer_type, subgroup_path, deg_path){
   subgroup_file_list <- list.files(subgroup_path)

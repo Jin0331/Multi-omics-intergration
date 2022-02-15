@@ -815,7 +815,7 @@ def feature_selection_svm(data_type, o):
         
     return feature_result
 
-def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_name, rdata_path):
+def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_name, rdata_path, batch_removal):
     r = ro.r
     r['source']('src/r-function.R')
     run_edgeR_r = ro.globalenv['run_edgeR']
@@ -840,7 +840,7 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
     
     if method == "deseq2" or method == "all":
     ## Deseq2
-        deseq = run_deseq_r(cancer_type, sample_group, rdata_path, group_reverse, file_name, deg_path)
+        deseq = run_deseq_r(cancer_type, sample_group, rdata_path, group_reverse, file_name, deg_path, batch_removal)
         with localconverter(ro.default_converter + pandas2ri.converter):
             deseq = ro.conversion.rpy2py(deseq)
         
@@ -856,7 +856,7 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
     else:
         return [edger, deseq]
     
-def deg_extract_normal(log_fc, pvalue, cancer_type, rdata_path, deg_path):
+def deg_extract_normal(log_fc, pvalue, cancer_type, rdata_path, deg_path, batch_removal):
     r = ro.r
     r['source']('src/r-function.R')
     run_deseq2_normal_r = ro.globalenv['run_deseq_normal']
@@ -864,7 +864,7 @@ def deg_extract_normal(log_fc, pvalue, cancer_type, rdata_path, deg_path):
     # R DF to pandas DF
     Path(rdata_path).mkdir(parents=True, exist_ok=True)
     
-    deseq = run_deseq2_normal_r(cancer_type, rdata_path, deg_path)
+    deseq = run_deseq2_normal_r(cancer_type, rdata_path, deg_path, batch_removal)
     with localconverter(ro.default_converter + pandas2ri.converter):
         deseq = ro.conversion.rpy2py(deseq)
 

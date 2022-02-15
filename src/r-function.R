@@ -10,6 +10,7 @@ suppressPackageStartupMessages({
   library(DESeq2)
   library(BiocParallel)
   library(EnhancedVolcano)
+  library(sva)
 })
 
 survFit <- function(sample_group_path){
@@ -248,7 +249,7 @@ run_edgeR_pancan <- function(sample_group_path, involve_brca, group_reverse){
   return(dataDEGsFiltLevel)
 }
 
-run_deseq_normal <- function(pr_name, rdata_path, deg_path){
+run_deseq_normal <- function(pr_name, rdata_path, deg_path, batch_removal){
   register(MulticoreParam(20))
   suppressMessages({
     if((!file.exists(paste0(rdata_path, pr_name, "_normal.RData"))) | 
@@ -301,9 +302,26 @@ run_deseq_normal <- function(pr_name, rdata_path, deg_path){
     tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
     tcga_deseq <- DESeq(tcga_se, parallel = TRUE)
 
+    # Hidden Batch effect remove
+    if(batch_removal){
+        # hidden batch removal
+        dat <- counts(tcga_deseq, normalized=TRUE)
+        mod <- model.matrix(~ group, colData(tcga_deseq))
+        mod0 <- model.matrix(~ 1, colData(tcga_deseq))
+        
+        # run sva
+        svseq <- svaseq(dat, mod, mod0, n.sv=2)
+        tcga_se_batch <-tcga_se
+
+        tcga_se_batch$SV1 <- svseq$sv[,1]
+        tcga_se_batch$SV2 <- svseq$sv[,2]
+        design(tcga_se_batch) <- ~ SV1 + SV2 + group
+        tcga_deseq <- DESeq(tcga_se_batch, parallel = TRUE)
+    }
+      
     tcga_deseq_result <- results(tcga_deseq, contrast=c("group", "TP", "NT"))
-    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "TP", "NT"))
-    
+    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "TP", "NT"))    
+      
     # volcano plot
     p <- EnhancedVolcano(tcga_deseq_result,
                     lab = rownames(tcga_deseq_result),
@@ -321,7 +339,7 @@ run_deseq_normal <- function(pr_name, rdata_path, deg_path){
   return(tcga_deseq_result_tidy)
 }
 
-run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, file_name, deg_path){
+run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, file_name, deg_path, batch_removal){
   register(MulticoreParam(20))
   suppressMessages({
     sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
@@ -370,6 +388,23 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, fil
     tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
     tcga_deseq <- DESeq(tcga_se, parallel = TRUE)
     
+    # Hidden Batch effect remove
+    if(batch_removal){
+        # hidden batch removal
+        dat <- counts(tcga_deseq, normalized=TRUE)
+        mod <- model.matrix(~ group, colData(tcga_deseq))
+        mod0 <- model.matrix(~ 1, colData(tcga_deseq))
+        
+        # run sva
+        svseq <- svaseq(dat, mod, mod0, n.sv=2)
+        tcga_se_batch <-tcga_se
+
+        tcga_se_batch$SV1 <- svseq$sv[,1]
+        tcga_se_batch$SV2 <- svseq$sv[,2]
+        design(tcga_se_batch) <- ~ SV1 + SV2 + group
+        tcga_deseq <- DESeq(tcga_se_batch, parallel = TRUE)
+    }  
+    
     tcga_deseq_result <- results(tcga_deseq, contrast=c("group", "Sub1", "Sub0"))
     tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "Sub1", "Sub0"))
     
@@ -389,7 +424,7 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, fil
   
   return(tcga_deseq_result_tidy)
 }
-run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse){
+run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse, batch_removal){
   register(MulticoreParam(5))
   sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
     
@@ -468,6 +503,23 @@ run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse){
     
     tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
     tcga_deseq <- DESeq(tcga_se)
+    
+    # Hidden Batch effect remove
+    if(batch_removal){
+        # hidden batch removal
+        dat <- counts(tcga_deseq, normalized=TRUE)
+        mod <- model.matrix(~ group, colData(tcga_deseq))
+        mod0 <- model.matrix(~ 1, colData(tcga_deseq))
+        
+        # run sva
+        svseq <- svaseq(dat, mod, mod0, n.sv=2)
+        tcga_se_batch <-tcga_se
+
+        tcga_se_batch$SV1 <- svseq$sv[,1]
+        tcga_se_batch$SV2 <- svseq$sv[,2]
+        design(tcga_se_batch) <- ~ SV1 + SV2 + group
+        tcga_deseq <- DESeq(tcga_se_batch, parallel = TRUE)
+    }      
     
     tcga_deseq_result <- results(tcga_deseq, tidy = T, contrast=c("group", "Sub1", "Sub0"))
     tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "Sub1", "Sub0"))

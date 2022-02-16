@@ -11,7 +11,11 @@ png/
 deg/
 best_deg/
 src/.ipynb_checkpoints/
+src/__pycache__
+.ipynb_checkpoints/
 GDCdata/
+result/
+
 
 # History files
 .Rhistory

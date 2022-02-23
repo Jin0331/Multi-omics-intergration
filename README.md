@@ -16,6 +16,18 @@ conda activate multiomics
 conda env create --file conda_env_cpu.yaml
 conda activate multiomics-cpu
 
-<tensorboard>
-tensorboard --logdir=tb_log --bind_all
+```
+
+```
+<Subgroup Detection>
+example : python src/Multi-omics-integration-subgroup.py \
+    -b /home/wmbio/WORK/gitworking/Multi-omics-intergration/ \
+    -c COAD \
+    -e 1000
+
+<Analysis>
+example : python src/Multi-omics-integration-analysis.py \
+         -b /home/wmbio/WORK/gitworking/Multi-omics-intergration/ \
+         -c COAD
+
 ```

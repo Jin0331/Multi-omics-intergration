@@ -1,3 +1,13 @@
+"""
+example : python src/Multi-omics-integration-subgroup.py \
+    -b /home/wmbio/WORK/gitworking/Multi-omics-intergration/ \
+    -c COAD \
+    -e 1000
+
+@author: Jinwoo Lee
+
+"""
+
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 from wmbio import * 

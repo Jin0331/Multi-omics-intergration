@@ -570,11 +570,12 @@ def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name,
     zipbObj = zip(model_names, list(zip(nb_result_list, model_list)))
     model_sil = dict(zipbObj)
     model_sil_sort = sorted(model_sil.items(), key = lambda item : item[1][0], reverse=True) 
-    best_model_n, best_model, s_score, encoded = model_sil_sort[0][0], model_sil_sort[0][1][1], model_sil_sort[0][1][0][0], model_sil_sort[0][1][0][1]
+    best_model_n, best_model, s_score, encoded = model_sil_sort[0][0], model_sil_sort[0][1][1], model_sil_sort[0][1][0][0],   model_sil_sort[0][1][0][1]
     
     # model save
     Path(model_path).mkdir(parents=True, exist_ok=True)
-    best_model.save(model_path + "AE_" + best_model_n + "_"+ cancer_type + "_" + file_name)
+    Path(model_path + cancer_type).mkdir(parents=True, exist_ok=True)
+    best_model.save(model_path + cancer_type + "/" + "AE_" + best_model_n + "_"+ cancer_type + "_" + file_name)
     
     pr = "Best AE : {0}\nSilhouette score : {1}".format(best_model_n, s_score)
     print(pr)
@@ -590,7 +591,8 @@ def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name,
     
     # dir check
     Path(group_path).mkdir(parents=True, exist_ok=True)
-    ae_groups.to_csv(group_path + cancer_type + "_GROUP_" + file_name + ".txt", sep="\t")
+    Path(group_path + cancer_type).mkdir(parents=True, exist_ok=True)
+    ae_groups.to_csv(group_path + cancer_type + "/" + cancer_type + "_GROUP_" + file_name + ".txt", sep="\t")
     
     return ae_groups, s_score
         
@@ -825,6 +827,7 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
     
     # R DF to pandas DF
     Path(deg_path).mkdir(parents=True, exist_ok=True)
+    Path(deg_path+cancer_type).mkdir(parents=True, exist_ok=True)
     Path(rdata_path).mkdir(parents=True, exist_ok=True)
     
     ## EdgeR
@@ -836,7 +839,7 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
         # DEG list
         edger_filter = ((edger.logFC <= -(log_fc)) | (edger.logFC >= log_fc)) & (edger.FDR < fdr)
         edger = edger.loc[edger_filter, :]
-        edger.to_csv(deg_path + cancer_type + "_EDGER_" + file_name + ".txt", sep = "\t", index = False)
+        edger.to_csv(deg_path + cancer_type + "/" + cancer_type + "_EDGER_" + file_name + ".txt", sep = "\t", index = False)
     
     if method == "deseq2" or method == "all":
     ## Deseq2
@@ -847,7 +850,7 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
         # DEG list
         deseq_filter = ((deseq.log2FoldChange <= -(log_fc)) | (deseq.log2FoldChange >= log_fc)) & (deseq.padj < fdr)
         deseq = deseq.loc[deseq_filter, :]
-        deseq.to_csv(deg_path + cancer_type + "_DESEQ2_" + file_name + ".txt", sep = "\t", index = False)
+        deseq.to_csv(deg_path + cancer_type + "/" + cancer_type + "_DESEQ2_" + file_name + ".txt", sep = "\t", index = False)
     
     if method == "deseq2":
         return deseq

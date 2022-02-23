@@ -15,6 +15,7 @@ src/__pycache__
 .ipynb_checkpoints/
 GDCdata/
 result/
+RESULT/
 
 
 # History files

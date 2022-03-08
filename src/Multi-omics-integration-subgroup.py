@@ -1,8 +1,7 @@
 """
 example : python src/Multi-omics-integration-subgroup.py \
     -b /home/wmbio/WORK/gitworking/Multi-omics-intergration/ \
-    -c COAD \
-    -e 1000
+    -c BRCA -e 100
 
 @author: Jinwoo Lee
 
@@ -14,6 +13,19 @@ from wmbio import *
 import argparse
 
 if __name__ == "__main__": 
+
+    ### Setting RAM GPU for training growth 
+    # gpus = tf.config.list_physical_devices('GPU')
+    # if gpus:
+    #     try:
+    #         # Currently, memory growth needs to be the same across GPUs
+    #         for gpu in gpus:
+    #             tf.config.experimental.set_memory_growth(gpu, True)
+    #         logical_gpus = tf.config.list_logical_devices('GPU')
+    #         print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    #     except RuntimeError as e:
+    #     # Memory growth must be set before GPUs have been initialized
+            # print(e)
 
     parser = argparse.ArgumentParser(description='Subgroup Detection!')
     parser.add_argument('-b', '--base', required=True, type=str, help='Root Path')
@@ -42,6 +54,7 @@ if __name__ == "__main__":
 
 
     for _ in range(CYCLE):
+      try:
         log_pvalue_l, silhouette_score_l, rna_anovar_f1, rna_rf_f1 = [], [], [], []
         mirna_anovar_f1, mirna_rf_f1, mt_anovar_f1, mt_rf_f1 = [], [], [], []
         file_name = []
@@ -105,3 +118,6 @@ if __name__ == "__main__":
             score_df.to_csv(GROUP_VALIDATION_PATH + CANCER_TYPE + "_validation.csv", index=False, mode='w')
         else:
             score_df.to_csv(GROUP_VALIDATION_PATH + CANCER_TYPE + "_validation.csv", index=False, mode='a', header=False)
+  
+      except Exception as e:
+        print("Skip this epoke : ", e)

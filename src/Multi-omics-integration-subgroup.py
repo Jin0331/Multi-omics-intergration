@@ -1,5 +1,7 @@
 """
-example : python src/Multi-omics-integration-subgroup.py \
+example : 
+conda activate multiomics-cpu
+python src/Multi-omics-integration-subgroup.py \
     -b /home/wmbio/WORK/gitworking/Multi-omics-intergration/ \
     -c BRCA -e 100
 

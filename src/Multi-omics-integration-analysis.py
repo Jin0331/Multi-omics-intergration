@@ -88,7 +88,8 @@ if __name__ == "__main__":
 
 
     # NT vs TP DEA
-    nt_tp_deseq2 = deg_extract_normal(log_fc=1, pvalue=0.05, cancer_type=CANCER_TYPE, 
+    # log fc, FDR value 수정
+    nt_tp_deseq2 = deg_extract_normal(log_fc=0, pvalue=0.1, cancer_type=CANCER_TYPE, 
                                   rdata_path=RDATA_PATH, deg_path=DEG_PATH, batch_removal=True)
 
     nt_tp_deseq2_col = nt_tp_deseq2[['row', 'log2FoldChange', 'pvalue']]

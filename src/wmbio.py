@@ -17,7 +17,7 @@ if gpus:
 if len(gpus) == 0:
     R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics-cpu/lib/R'
 else :
-    R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics/lib/R'        
+    R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics-gpu/lib/R'        
         
 import re
 import gc

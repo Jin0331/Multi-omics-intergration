@@ -27,6 +27,7 @@ from requests import get
 from pathlib import Path
 
 import pandas as pd
+import pymysql
 import numpy as np
 import seaborn as sns
 from functools import reduce
@@ -899,9 +900,25 @@ def col_rename(df, num, bs):
     df.columns = change_col
     
     return df
+
+def query_tm_db(query):
+    # Connect to MariaDB (mariadb.connect 대신 pymysql.connect 로 해도 된다)
+    dbconn = pymysql.connect(
+        user="root",
+        password="sempre813!",
+        host="192.168.0.91",
+        port=3306,
+        database="Textmining"
+    )
+ 
+    # mariaDB Query to Pandas DataFrame
+    query_result= pd.read_sql(query,dbconn)
+    dbconn.close()
     
+    return query_result
+
 
 
 if __name__ == "__main__": 
-    print("moduel.py")
+    print("not main")
     

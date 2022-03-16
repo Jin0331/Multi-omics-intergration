@@ -1,7 +1,7 @@
 """
 example : python src/Multi-omics-integration-analysis.py \
          -b /home/wmbio/WORK/gitworking/Multi-omics-intergration/ \
-         -c COAD
+         -c LIHC
 
 @author: Jinwoo Lee
 """
@@ -95,10 +95,16 @@ if __name__ == "__main__":
     nt_tp_deseq2_col = nt_tp_deseq2[['row', 'log2FoldChange', 'pvalue']]
     nt_tp_deseq2_col.columns = ['gene', 'NT-TP_log2FoldChange', 'pvalue']
 
+    result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, left_on='gene', right_on='gene', how = 'left')   
+
+    # textmining
+    sql = 'SELECT * FROM ' + CANCER_TYPE
+    tm_df = query_tm_db(sql)
+    result_combine_tm = pd.merge(left=result_combine, right=tm_df, left_on="gene", right_on="gene", how='left')
+
     # Result write
     Path(os.getcwd() + "/RESULT").mkdir(parents=True, exist_ok=True)
     Path(os.getcwd() + "/RESULT/" + CANCER_TYPE).mkdir(parents=True, exist_ok=True)
     time_stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, left_on='gene', right_on='gene', how = 'left')   
-    result_combine.to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-' + time_stamp +'.csv', index = False)
+    result_combine_tm.to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-' + time_stamp +'.csv', index = False)

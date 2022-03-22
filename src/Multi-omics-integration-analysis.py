@@ -1,7 +1,7 @@
 """
 example : python src/Multi-omics-integration-analysis.py \
          -b /home/wmbio/WORK/gitworking/Multi-omics-intergration/ \
-         -c LIHC
+         -c BRCA
 
 @author: Jinwoo Lee
 """
@@ -52,22 +52,28 @@ if __name__ == "__main__":
     bestSubgroup = group_score.FILENAME.to_list()
 
     # 5 fold로 제한.
-    if len(bestSubgroup) > 10:
-        bestSubgroup = bestSubgroup[:10]
+    if len(bestSubgroup) >= 100:
+        bestSubgroup = bestSubgroup[:100]
+    print("SubGroup count : ", len(bestSubgroup))
 
     # DEA
     dea_result = list()
     for best_group in bestSubgroup:
+        
+        DEG_CHECK = "_".join([CANCER_TYPE, METHOD.upper(), best_group]) + ".txt"
         SAMPLE_GROUP = GROUP_PHTH + CANCER_TYPE + "/" + CANCER_TYPE + "_GROUP_" + best_group + ".txt"
         
-        # DEG Extraction
-        deg_list = deg_extract(log_fc=LOGFC, fdr=FDR,
-                    cancer_type=CANCER_TYPE, 
-                    sample_group=SAMPLE_GROUP, deg_path=DEG_PATH, 
-                    file_name=best_group,
-                    rdata_path=RDATA_PATH,
-                    method=METHOD,
-                    batch_removal=True)
+        if os.path.isfile(DEG_PATH + CANCER_TYPE + "/" + DEG_CHECK):
+            deg_list = pd.read_csv(DEG_PATH + CANCER_TYPE + "/" + DEG_CHECK, sep = "\t")
+        else :
+            # DEG Extraction
+            deg_list = deg_extract(log_fc=LOGFC, fdr=FDR,
+                          cancer_type=CANCER_TYPE, 
+                          sample_group=SAMPLE_GROUP, deg_path=DEG_PATH, 
+                          file_name=best_group,
+                          rdata_path=RDATA_PATH,
+                          method=METHOD,
+                          batch_removal=True)
         
         dea_result.append(deg_list)
 

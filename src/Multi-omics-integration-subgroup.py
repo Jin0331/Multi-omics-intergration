@@ -72,7 +72,7 @@ if __name__ == "__main__":
         encoder_denoisy = run_ae_denoisy(X_train=X_train, X_test=X_test, tensorboard_path=TENSORBOARD_PATH)
 
         group, silhouette_score = best_ae_model(model_list=[encoder_vanilla, encoder_sparse, encoder_denoisy], o=omics,
-                    group_path=GROUP_PHTH, model_path=MODEL_PATH, cancer_type=CANCER_TYPE, file_name=FILE_NAME)
+                    group_path=GROUP_PHTH, model_path=MODEL_PATH, cancer_type=CANCER_TYPE, raw_path=RAW_file_path, file_name=FILE_NAME)
 
         ## Sub-group Evalutation
         ### load preprocess data

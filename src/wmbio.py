@@ -531,7 +531,7 @@ def survfit(df, file_name):
     km_survival_r = ro.globalenv['km_survival']
     km_survival_r(r_from_pd_df, file_name, PNG_PATH)
 
-def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name, 
+def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name, raw_path,
                   model_names = ['encoder_vanilla', 'encoder_sparse', 'encoder_denoisy']):
     
     def model_prediction(model):
@@ -548,9 +548,11 @@ def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name,
 
         omic_encoded['sample'] = o2.index.to_list()
         omic_encoded.set_index('sample', inplace=True)
-        
-        pheno = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
-                    sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
+      
+        # pheno = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
+        #             sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
+        pheno = pd.read_csv(raw_path + "Survival_SupplementalTable_S1_20171025_xena_sp",
+                            sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
 
         # encoded pheno
         omic_encoded_pheno = pd.merge(left=omic_encoded, right=pheno, how="inner", on="sample")

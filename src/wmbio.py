@@ -85,12 +85,12 @@ from rpy2.robjects.conversion import localconverter
 
 # function
 
-def cancer_select(cols, cancer_type):
+def cancer_select(cols, cancer_type, raw_path):
     # phenotype
-    phe1 = pd.read_csv("https://gdc-hub.s3.us-east-1.amazonaws.com/download/GDC-PANCAN.basic_phenotype.tsv.gz", sep="\t")
+    phe1 = pd.read_csv(raw_path + "GDC-PANCAN.basic_phenotype.tsv", sep="\t")
     phe1 = phe1.loc[phe1.program == "TCGA", :].loc[:, ['sample', 'sample_type', 'project_id']].drop_duplicates(['sample'])
     phe1['sample'] =  phe1.apply(lambda x : x['sample'][:-1], axis=1)
-    phe2 = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/TCGA_phenotype_denseDataOnlyDownload.tsv.gz", sep="\t")
+    phe2 = pd.read_csv(raw_path + "TCGA_phenotype_denseDataOnlyDownload.tsv", sep="\t")
     ph_join = pd.merge(left = phe2 , right = phe1, how = "left", on = "sample").dropna(subset=['project_id'])
     
     if cancer_type == "PAN" or cancer_type == "PANCAN":
@@ -171,7 +171,7 @@ def load_tcga_dataset(pkl_path, raw_path, cancer_type, norm, minmax=None):
         if os.path.isfile(pkl_path + cancer_type + "_rna.pkl") == False:
             col = pd.read_csv(raw_path + mrna_f,
                          sep = "\t", index_col=0, nrows=0).columns.to_list()
-            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type)
+            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type, raw_path=raw_path)
             df_chunk = pd.read_csv(raw_path + mrna_f,
                          sep = "\t", index_col=0, iterator=True, chunksize=50000, usecols=use_col)
             rna = pd.concat([chunk for chunk in df_chunk])
@@ -184,7 +184,7 @@ def load_tcga_dataset(pkl_path, raw_path, cancer_type, norm, minmax=None):
         # miRNA expression
         if os.path.isfile(pkl_path + cancer_type + "_mirna.pkl") == False:            
             col = pd.read_csv(raw_path + mirna_f, sep = "\t", index_col=0, nrows=0).columns.to_list()
-            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type)
+            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type, raw_path=raw_path)
 
             df_chunk = pd.read_csv(raw_path + mirna_f, sep = "\t", index_col=0, iterator=True, chunksize=50000, usecols=use_col)
             mirna = pd.concat([chunk for chunk in df_chunk])
@@ -197,7 +197,7 @@ def load_tcga_dataset(pkl_path, raw_path, cancer_type, norm, minmax=None):
         # methylation
         if os.path.isfile(pkl_path + cancer_type + "_mt.pkl") == False: 
             col = pd.read_csv(raw_path + mt_f, sep = "\t", index_col=0, nrows=0).columns.to_list()
-            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type)
+            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type, raw_path=raw_path)
 
             df_chunk = pd.read_csv(raw_path + mt_f, sep = "\t", index_col=0, iterator=True, chunksize=50000, usecols=use_col)
             mt = pd.concat([chunk for chunk in df_chunk])
@@ -580,7 +580,7 @@ def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name,
     Path(model_path + cancer_type).mkdir(parents=True, exist_ok=True)
     best_model.save(model_path + cancer_type + "/" + "AE_" + best_model_n + "_"+ cancer_type + "_" + file_name)
     
-    pr = "Best AE : {0}\nSilhouette score : {1}".format(best_model_n, s_score)
+    pr = 'Best AE : {0}\n'.format(best_model_n)
     print(pr)
       
     
@@ -675,8 +675,10 @@ def load_preprocess_tcga_dataset(pkl_path, raw_path, group, norm, cancer_type):
         mt.index = mt_join_gene_filter_index
     
     # phenotype only omics 
-    pheno = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
-                    sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
+    # pheno = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
+    #                 sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
+    pheno = pd.read_csv(raw_path + "Survival_SupplementalTable_S1_20171025_xena_sp",
+                            sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])                
     pheno.set_index('sample', inplace=True)
     
     join_list = [rna, mirna, mt]

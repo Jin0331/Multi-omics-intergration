@@ -113,6 +113,8 @@ if __name__ == "__main__":
         'Methylation_ANOVA_F1' : mt_anovar_f1,
         'Methylation_RF_F1' : mt_rf_f1
         })
+        
+        print('Silhouette score : {0}\nCox-ph Log Rank Test : {1}'.format(silhouette_score_l, log_pvalue_l))
 
         # score table
         if not os.path.exists(GROUP_VALIDATION_PATH):

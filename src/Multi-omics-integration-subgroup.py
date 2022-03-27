@@ -83,7 +83,7 @@ if __name__ == "__main__":
         feature_result = feature_selection_svm(data_type=["rna", "mirna", "mt"], o=omics_preprocess)
 
         ### Survival Analysis - logranktest
-        log_pvalue = log_rank_test(df=omics_preprocess["omics"], png_path=PNG_PATH, file_name=FILE_NAME)
+        log_pvalue = log_rank_test(df=omics_preprocess["omics"], png_path=PNG_PATH, cancer_type = CANCER_TYPE,file_name=FILE_NAME)
 
         ### Score
         log_pvalue_l.append(log_pvalue)

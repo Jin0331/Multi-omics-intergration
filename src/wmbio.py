@@ -459,7 +459,7 @@ def group_convert(sample_group):
         return True
 
 
-def log_rank_test(df, png_path, file_name):
+def log_rank_test(df, png_path, cancer_type, file_name):
     group_size = len(set(df.loc[:, ["group"]].iloc[:,0].to_list()))
     labels = ["G" + str(index) for index in range(group_size)]
     
@@ -497,8 +497,8 @@ def log_rank_test(df, png_path, file_name):
 
     plt.tight_layout()
     plt.ioff()
-    Path(png_path).mkdir(parents=True, exist_ok=True)
-    plt.savefig(png_path + file_name + "_logrank.png", format='png', dpi=300)
+    Path(png_path + "/" + cancer_type).mkdir(parents=True, exist_ok=True)
+    plt.savefig(png_path + "/" + cancer_type + "/" + file_name + "_logrank.png", format='png', dpi=200)
 
     return pvalue
 
@@ -580,7 +580,7 @@ def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name,
     Path(model_path + cancer_type).mkdir(parents=True, exist_ok=True)
     best_model.save(model_path + cancer_type + "/" + "AE_" + best_model_n + "_"+ cancer_type + "_" + file_name)
     
-    pr = 'Best AE : {0}\n'.format(best_model_n)
+    pr = 'Best AE : {0}'.format(best_model_n)
     print(pr)
       
     

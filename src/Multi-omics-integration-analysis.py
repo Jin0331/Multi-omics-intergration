@@ -43,6 +43,7 @@ if __name__ == "__main__":
     group_score = pd.read_csv(GROUP_VALIDATION_PATH + CANCER_TYPE + '_validation.csv', usecols=col)
 
     # Condition for Filtering
+    # 
     filter_cond = (group_score['Silhouette'] >= 0.2) & (group_score['Log Rank Test'] < 0.05) & \
                 ((group_score['RNA_ANOVA_F1'] > 80) | (group_score['RNA_RF_F1'] > 80)) & \
                 ((group_score['miRNA_ANOVA_F1'] > 80) | (group_score['miRNA_RF_F1'] > 80)) & \

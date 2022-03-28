@@ -498,7 +498,7 @@ def log_rank_test(df, png_path, cancer_type, file_name):
     plt.tight_layout()
     plt.ioff()
     Path(png_path + "/" + cancer_type).mkdir(parents=True, exist_ok=True)
-    plt.savefig(png_path + "/" + cancer_type + "/" + file_name + "_logrank.png", format='png', dpi=200)
+    plt.savefig(png_path + "/" + cancer_type + "/" + file_name + "_logrank.png", format='png', dpi=500)
 
     return pvalue
 

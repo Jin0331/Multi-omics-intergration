@@ -25,6 +25,7 @@ import pickle
 import datetime
 from requests import get
 from pathlib import Path
+import random
 
 import pandas as pd
 import pymysql

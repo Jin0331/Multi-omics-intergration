@@ -41,20 +41,29 @@ if __name__ == "__main__":
         'miRNA_ANOVA_F1','miRNA_RF_F1','Methylation_ANOVA_F1','Methylation_RF_F1']
 
     group_score = pd.read_csv(GROUP_VALIDATION_PATH + CANCER_TYPE + '_validation.csv', usecols=col)
-
+    
+    # Q3 value
+    SILHOUETTE = group_score.Silhouette.quantile(.7)
+    RNA_ANOVA = group_score.RNA_ANOVA_F1.quantile(.7)
+    RNA_RF = group_score.RNA_RF_F1.quantile(.7)
+    MIRNA_ANOVAR = group_score.miRNA_ANOVA_F1.quantile(.7)
+    MIRNA_RF = group_score.miRNA_RF_F1.quantile(.7)
+    MT_ANOVAR = group_score.Methylation_ANOVA_F1.quantile(.7)
+    MT_RF = group_score.Methylation_RF_F1.quantile(.7)   
+ 
     # Condition for Filtering
-    # 
-    filter_cond = (group_score['Silhouette'] >= 0.2) & (group_score['Log Rank Test'] < 0.05) & \
-                ((group_score['RNA_ANOVA_F1'] > 80) | (group_score['RNA_RF_F1'] > 80)) & \
-                ((group_score['miRNA_ANOVA_F1'] > 80) | (group_score['miRNA_RF_F1'] > 80)) & \
-                ((group_score['Methylation_ANOVA_F1'] > 85) | (group_score['Methylation_RF_F1'] > 85))
+    filter_cond = (group_score['Silhouette'] >= SILHOUETTE) & (group_score['Log Rank Test'] < 0.05) & \
+              ((group_score['RNA_ANOVA_F1'] > RNA_ANOVA) | (group_score['RNA_RF_F1'] > RNA_RF)) & \
+              ((group_score['miRNA_ANOVA_F1'] > MIRNA_ANOVAR) | (group_score['miRNA_RF_F1'] > MIRNA_RF)) & \
+              ((group_score['Methylation_ANOVA_F1'] > MT_ANOVAR) | (group_score['Methylation_RF_F1'] > MT_RF))
+              
     group_score = group_score[filter_cond].sort_values(["Silhouette"], ascending = (False))
-
     bestSubgroup = group_score.FILENAME.to_list()
 
-    # 5 fold로 제한.
+    # random 추출
     if len(bestSubgroup) >= 100:
-        bestSubgroup = bestSubgroup[:100]
+      random.seed(331)
+      bestSubgroup = random.sample(bestSubgroup, k=100)
     print("SubGroup count : ", len(bestSubgroup))
 
     # DEA

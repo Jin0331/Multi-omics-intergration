@@ -38,6 +38,7 @@ from matplotlib_venn import venn3_unweighted
 from matplotlib import rcParams
 from IPython.display import SVG
 from numba import cuda
+import gc
 
 # lifelines
 from lifelines import KaplanMeierFitter
@@ -443,11 +444,11 @@ def log_test(df):
     return feature_log
 
 # pandas DF to R DF
-def group_convert(sample_group):           
+def group_convert(sample_group, raw_path):           
     r = ro.r
     r['source']('src/r-function.R')
     survFit_r = ro.globalenv['survFit']
-    survFit_result = survFit_r(sample_group)
+    survFit_result = survFit_r(sample_group, raw_path)
     
     # R DF to pandas DF
     with localconverter(ro.default_converter + pandas2ri.converter):
@@ -823,13 +824,13 @@ def feature_selection_svm(data_type, o):
         
     return feature_result
 
-def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_name, rdata_path, batch_removal):
+def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_name, rdata_path, batch_removal, raw_path):
     r = ro.r
     r['source']('src/r-function.R')
     run_edgeR_r = ro.globalenv['run_edgeR']
     run_deseq_r = ro.globalenv['run_deseq']
     
-    group_reverse = group_convert(sample_group)
+    group_reverse = group_convert(sample_group, raw_path)
     
     # R DF to pandas DF
     Path(deg_path).mkdir(parents=True, exist_ok=True)

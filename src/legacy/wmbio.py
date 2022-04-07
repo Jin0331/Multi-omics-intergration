@@ -17,7 +17,7 @@ if gpus:
 if len(gpus) == 0:
     R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics-cpu/lib/R'
 else :
-    R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics/lib/R'        
+    R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics-gpu/lib/R'        
         
 import re
 import gc
@@ -25,8 +25,10 @@ import pickle
 import datetime
 from requests import get
 from pathlib import Path
+import random
 
 import pandas as pd
+import pymysql
 import numpy as np
 import seaborn as sns
 from functools import reduce
@@ -84,12 +86,12 @@ from rpy2.robjects.conversion import localconverter
 
 # function
 
-def cancer_select(cols, cancer_type):
+def cancer_select(cols, cancer_type, raw_path):
     # phenotype
-    phe1 = pd.read_csv("https://gdc-hub.s3.us-east-1.amazonaws.com/download/GDC-PANCAN.basic_phenotype.tsv.gz", sep="\t")
+    phe1 = pd.read_csv(raw_path + "GDC-PANCAN.basic_phenotype.tsv", sep="\t")
     phe1 = phe1.loc[phe1.program == "TCGA", :].loc[:, ['sample', 'sample_type', 'project_id']].drop_duplicates(['sample'])
     phe1['sample'] =  phe1.apply(lambda x : x['sample'][:-1], axis=1)
-    phe2 = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/TCGA_phenotype_denseDataOnlyDownload.tsv.gz", sep="\t")
+    phe2 = pd.read_csv(raw_path + "TCGA_phenotype_denseDataOnlyDownload.tsv", sep="\t")
     ph_join = pd.merge(left = phe2 , right = phe1, how = "left", on = "sample").dropna(subset=['project_id'])
     
     if cancer_type == "PAN" or cancer_type == "PANCAN":
@@ -170,7 +172,7 @@ def load_tcga_dataset(pkl_path, raw_path, cancer_type, norm, minmax=None):
         if os.path.isfile(pkl_path + cancer_type + "_rna.pkl") == False:
             col = pd.read_csv(raw_path + mrna_f,
                          sep = "\t", index_col=0, nrows=0).columns.to_list()
-            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type)
+            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type, raw_path=raw_path)
             df_chunk = pd.read_csv(raw_path + mrna_f,
                          sep = "\t", index_col=0, iterator=True, chunksize=50000, usecols=use_col)
             rna = pd.concat([chunk for chunk in df_chunk])
@@ -183,7 +185,7 @@ def load_tcga_dataset(pkl_path, raw_path, cancer_type, norm, minmax=None):
         # miRNA expression
         if os.path.isfile(pkl_path + cancer_type + "_mirna.pkl") == False:            
             col = pd.read_csv(raw_path + mirna_f, sep = "\t", index_col=0, nrows=0).columns.to_list()
-            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type)
+            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type, raw_path=raw_path)
 
             df_chunk = pd.read_csv(raw_path + mirna_f, sep = "\t", index_col=0, iterator=True, chunksize=50000, usecols=use_col)
             mirna = pd.concat([chunk for chunk in df_chunk])
@@ -196,7 +198,7 @@ def load_tcga_dataset(pkl_path, raw_path, cancer_type, norm, minmax=None):
         # methylation
         if os.path.isfile(pkl_path + cancer_type + "_mt.pkl") == False: 
             col = pd.read_csv(raw_path + mt_f, sep = "\t", index_col=0, nrows=0).columns.to_list()
-            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type)
+            use_col = ['sample'] + cancer_select(cols=col, cancer_type=cancer_type, raw_path=raw_path)
 
             df_chunk = pd.read_csv(raw_path + mt_f, sep = "\t", index_col=0, iterator=True, chunksize=50000, usecols=use_col)
             mt = pd.concat([chunk for chunk in df_chunk])
@@ -441,11 +443,11 @@ def log_test(df):
     return feature_log
 
 # pandas DF to R DF
-def group_convert(sample_group):           
+def group_convert(sample_group, raw_path):           
     r = ro.r
     r['source']('src/r-function.R')
     survFit_r = ro.globalenv['survFit']
-    survFit_result = survFit_r(sample_group)
+    survFit_result = survFit_r(sample_group, raw_path)
     
     # R DF to pandas DF
     with localconverter(ro.default_converter + pandas2ri.converter):
@@ -458,7 +460,7 @@ def group_convert(sample_group):
         return True
 
 
-def log_rank_test(df, png_path, file_name):
+def log_rank_test(df, png_path, cancer_type, file_name):
     group_size = len(set(df.loc[:, ["group"]].iloc[:,0].to_list()))
     labels = ["G" + str(index) for index in range(group_size)]
     
@@ -496,8 +498,8 @@ def log_rank_test(df, png_path, file_name):
 
     plt.tight_layout()
     plt.ioff()
-    Path(png_path).mkdir(parents=True, exist_ok=True)
-    plt.savefig(png_path + file_name + "_logrank.png", format='png', dpi=300)
+    Path(png_path + "/" + cancer_type).mkdir(parents=True, exist_ok=True)
+    plt.savefig(png_path + "/" + cancer_type + "/" + file_name + "_logrank.png", format='png', dpi=500)
 
     return pvalue
 
@@ -547,7 +549,7 @@ def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name,
 
         omic_encoded['sample'] = o2.index.to_list()
         omic_encoded.set_index('sample', inplace=True)
-        
+      
         # pheno = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
         #             sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
         pheno = pd.read_csv(raw_path + "Survival_SupplementalTable_S1_20171025_xena_sp",
@@ -579,7 +581,7 @@ def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name,
     Path(model_path + cancer_type).mkdir(parents=True, exist_ok=True)
     best_model.save(model_path + cancer_type + "/" + "AE_" + best_model_n + "_"+ cancer_type + "_" + file_name)
     
-    pr = "Best AE : {0}\nSilhouette score : {1}".format(best_model_n, s_score)
+    pr = 'Best AE : {0}'.format(best_model_n)
     print(pr)
       
     
@@ -674,8 +676,10 @@ def load_preprocess_tcga_dataset(pkl_path, raw_path, group, norm, cancer_type):
         mt.index = mt_join_gene_filter_index
     
     # phenotype only omics 
-    pheno = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
-                    sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
+    # pheno = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
+    #                 sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
+    pheno = pd.read_csv(raw_path + "Survival_SupplementalTable_S1_20171025_xena_sp",
+                            sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])                
     pheno.set_index('sample', inplace=True)
     
     join_list = [rna, mirna, mt]
@@ -819,13 +823,13 @@ def feature_selection_svm(data_type, o):
         
     return feature_result
 
-def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_name, rdata_path, batch_removal):
+def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_name, rdata_path, batch_removal, raw_path):
     r = ro.r
     r['source']('src/r-function.R')
     run_edgeR_r = ro.globalenv['run_edgeR']
     run_deseq_r = ro.globalenv['run_deseq']
     
-    group_reverse = group_convert(sample_group)
+    group_reverse = group_convert(sample_group, raw_path)
     
     # R DF to pandas DF
     Path(deg_path).mkdir(parents=True, exist_ok=True)
@@ -901,9 +905,25 @@ def col_rename(df, num, bs):
     df.columns = change_col
     
     return df
+
+def query_tm_db(query):
+    # Connect to MariaDB (mariadb.connect 대신 pymysql.connect 로 해도 된다)
+    dbconn = pymysql.connect(
+        user="root",
+        password="sempre813!",
+        host="192.168.0.91",
+        port=3306,
+        database="Textmining"
+    )
+ 
+    # mariaDB Query to Pandas DataFrame
+    query_result= pd.read_sql(query,dbconn)
+    dbconn.close()
     
+    return query_result
+
 
 
 if __name__ == "__main__": 
-    print("moduel.py")
+    print("not main")
     

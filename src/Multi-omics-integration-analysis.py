@@ -34,7 +34,7 @@ if __name__ == "__main__":
     GROUP_VALIDATION_PATH = os.getcwd() + '/group_validation/'
     DEG_PATH = os.getcwd() + "/best_deg/"
     RDATA_PATH = os.getcwd() + "/RAW_DATA/GDC_PREPARE/"
-
+    RAW_PATH = os.getcwd() + "/RAW_DATA/"
 
     # Load Validation score
     col=['FILENAME','Log Rank Test','Silhouette','RNA_ANOVA_F1','RNA_RF_F1',
@@ -83,9 +83,11 @@ if __name__ == "__main__":
                           file_name=best_group,
                           rdata_path=RDATA_PATH,
                           method=METHOD,
-                          batch_removal=True)
+                          batch_removal=True,
+                          raw_path=RAW_PATH)
         
         dea_result.append(deg_list)
+        gc.collect()
 
     # Filter DEA
     # combine result

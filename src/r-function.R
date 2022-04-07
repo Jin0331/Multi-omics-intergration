@@ -13,12 +13,12 @@ suppressPackageStartupMessages({
   library(sva)
 })
 
-survFit <- function(sample_group_path){
+survFit <- function(sample_group_path, raw_path){
   
   sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
   
   # surv data
-  pheno <- read_delim("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
+  pheno <- read_delim(paste0(raw_path, "/Survival_SupplementalTable_S1_20171025_xena_sp"), 
                       col_select = c('sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'),
                       delim = "\t", show_col_types = FALSE)
   sample_group_surv <- left_join(x = sample_group, y = pheno, by = "sample")

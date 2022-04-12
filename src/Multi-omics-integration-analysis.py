@@ -49,7 +49,16 @@ if __name__ == "__main__":
     MIRNA_ANOVAR = group_score.miRNA_ANOVA_F1.quantile(.7)
     MIRNA_RF = group_score.miRNA_RF_F1.quantile(.7)
     MT_ANOVAR = group_score.Methylation_ANOVA_F1.quantile(.7)
-    MT_RF = group_score.Methylation_RF_F1.quantile(.7)   
+    MT_RF = group_score.Methylation_RF_F1.quantile(.7)
+
+    # stdout
+    print("SILHOUETTE Q3 : ", SILHOUETTE)
+    print("RNA_ANOVA Q3 : ", RNA_ANOVA)
+    print("RNA_RF Q3 : ", RNA_RF)
+    print("MIRNA_ANOVAR Q3 : ", MIRNA_ANOVAR)
+    print("MIRNA_RF Q3 : ", MIRNA_RF)
+    print("MT_ANOVAR Q3 : ", MT_ANOVAR)
+    print("MT_RF Q3 : ", MT_RF)
  
     # Condition for Filtering
     filter_cond = (group_score['Silhouette'] >= SILHOUETTE) & (group_score['Log Rank Test'] < 0.05) & \

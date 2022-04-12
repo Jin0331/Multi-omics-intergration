@@ -57,197 +57,197 @@ nb_cluster_test <- function(df){
 }
 
 # function
-run_edgeR <- function(pr_name, sample_group_path, group_reverse){
+# run_edgeR <- function(pr_name, sample_group_path, group_reverse){
   
-  suppressMessages({
-    sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+#   suppressMessages({
+#     sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
     
-    # group convert
-    if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
-    if((!file.exists(paste0(rdata_path, pr_name, ".RData"))) | 
-       (!file.exists(paste0(rdata_path, pr_name, "_RnaseqSE.RData")))){
-        query <- GDCquery(project = paste0("TCGA-", pr_name), 
-                          data.category = "Gene expression",
-                          data.type = "Gene expression quantification",
-                          experimental.strategy = "RNA-Seq",
-                          platform = "Illumina HiSeq",
-                          file.type = "results",
-                          barcode = sample_group %>% pull(1), 
-                          legacy = TRUE)
+#     # group convert
+#     if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
+#     if((!file.exists(paste0(rdata_path, pr_name, ".RData"))) | 
+#        (!file.exists(paste0(rdata_path, pr_name, "_RnaseqSE.RData")))){
+#         query <- GDCquery(project = paste0("TCGA-", pr_name), 
+#                           data.category = "Gene expression",
+#                           data.type = "Gene expression quantification",
+#                           experimental.strategy = "RNA-Seq",
+#                           platform = "Illumina HiSeq",
+#                           file.type = "results",
+#                           barcode = sample_group %>% pull(1), 
+#                           legacy = TRUE)
 
-        GDCdownload(query)
-        RnaseqSE <- GDCprepare(query)
+#         GDCdownload(query)
+#         RnaseqSE <- GDCprepare(query)
         
-        save(RnaseqSE, file = paste0(rdata_path, pr_name, "_RnaseqSE.RData"))
+#         save(RnaseqSE, file = paste0(rdata_path, pr_name, "_RnaseqSE.RData"))
         
-        Rnaseq_CorOutliers <- assay(RnaseqSE) # to matrix
+#         Rnaseq_CorOutliers <- assay(RnaseqSE) # to matrix
 
-        # normalization of genes, # quantile filter of genes
-        dataNorm <- TCGAanalyze_Normalization(tabDF = Rnaseq_CorOutliers, geneInfo =  geneInfo)
-        dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
-                                          method = "quantile", 
-                                          qnt.cut =  0.25)
+#         # normalization of genes, # quantile filter of genes
+#         dataNorm <- TCGAanalyze_Normalization(tabDF = Rnaseq_CorOutliers, geneInfo =  geneInfo)
+#         dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
+#                                           method = "quantile", 
+#                                           qnt.cut =  0.25)
         
-        save(dataFilt, file = paste0(rdata_path, pr_name, ".RData"))
-    } else {
-        load(paste0(rdata_path, pr_name, "_RnaseqSE.RData"))
-        load(paste0(rdata_path, pr_name, ".RData"))
-    }
+#         save(dataFilt, file = paste0(rdata_path, pr_name, ".RData"))
+#     } else {
+#         load(paste0(rdata_path, pr_name, "_RnaseqSE.RData"))
+#         load(paste0(rdata_path, pr_name, ".RData"))
+#     }
     
-    # subgroup names
-    sub0 <- sample_group %>% filter(group == 0) %>% pull(1)
-    sub1 <- sample_group %>% filter(group == 1) %>% pull(1)
+#     # subgroup names
+#     sub0 <- sample_group %>% filter(group == 0) %>% pull(1)
+#     sub1 <- sample_group %>% filter(group == 1) %>% pull(1)
     
-    sample_subgroup <- Rnaseq_CorOutliers %>% colnames() %>% lapply(X = ., FUN = function(value){
+#     sample_subgroup <- Rnaseq_CorOutliers %>% colnames() %>% lapply(X = ., FUN = function(value){
       
-      value_trans <- str_extract_all(value, pattern = "TCGA-[:alnum:]+-[:alnum:]+-[:digit:]+") %>%  unlist()
-      subgroup_df <- tibble(sample_barcode = NA, subgroup = NA, .rows = 0)
+#       value_trans <- str_extract_all(value, pattern = "TCGA-[:alnum:]+-[:alnum:]+-[:digit:]+") %>%  unlist()
+#       subgroup_df <- tibble(sample_barcode = NA, subgroup = NA, .rows = 0)
       
       
-      if(value_trans %in% sub0){
-        subgroup_df <- tibble(sample_barcode = value, subgroup = 0)
-      } else {
-        subgroup_df <- tibble(sample_barcode = value, subgroup = 1)
-      }
+#       if(value_trans %in% sub0){
+#         subgroup_df <- tibble(sample_barcode = value, subgroup = 0)
+#       } else {
+#         subgroup_df <- tibble(sample_barcode = value, subgroup = 1)
+#       }
       
-      return(subgroup_df)
+#       return(subgroup_df)
       
-    }) %>% bind_rows()
+#     }) %>% bind_rows()
     
-    sub0_name <- sample_subgroup %>% filter(subgroup == 0) %>% pull(sample_barcode)
-    sub1_name <- sample_subgroup %>% filter(subgroup == 1) %>% pull(sample_barcode)
+#     sub0_name <- sample_subgroup %>% filter(subgroup == 0) %>% pull(sample_barcode)
+#     sub1_name <- sample_subgroup %>% filter(subgroup == 1) %>% pull(sample_barcode)
     
-    #Diff.expr.analysis (DEA)
-    dataDEGs <- TCGAanalyze_DEA(mat1 = dataFilt[,sub0_name],
-                                mat2 = dataFilt[,sub1_name],
-                                Cond1type = "Sub-0",
-                                Cond2type = "Sub-1",
-                                #                               fdr.cut = 0.01 ,
-                                #                               logFC.cut = 1,
-                                method = "glmLRT",
-                                paired = F)
+#     #Diff.expr.analysis (DEA)
+#     dataDEGs <- TCGAanalyze_DEA(mat1 = dataFilt[,sub0_name],
+#                                 mat2 = dataFilt[,sub1_name],
+#                                 Cond1type = "Sub-0",
+#                                 Cond2type = "Sub-1",
+#                                 #                               fdr.cut = 0.01 ,
+#                                 #                               logFC.cut = 1,
+#                                 method = "glmLRT",
+#                                 paired = F)
     
-    # DEGs table with expression values in normal and tumor samples
-    dataDEGsFiltLevel <- TCGAanalyze_LevelTab(dataDEGs,"Sub-0","Sub-1",
-                                              dataFilt[,sub0_name],dataFilt[,sub1_name])
-    #   write_delim(dataDEGsFiltLevel, file = paste0(dea_result_path, "_", pr_name, "_EDGER_", file_name, ".txt"), delim = "\t")   
-  })  
+#     # DEGs table with expression values in normal and tumor samples
+#     dataDEGsFiltLevel <- TCGAanalyze_LevelTab(dataDEGs,"Sub-0","Sub-1",
+#                                               dataFilt[,sub0_name],dataFilt[,sub1_name])
+#     #   write_delim(dataDEGsFiltLevel, file = paste0(dea_result_path, "_", pr_name, "_EDGER_", file_name, ".txt"), delim = "\t")   
+#   })  
   
-  return(dataDEGsFiltLevel)
-}
-run_edgeR_pancan <- function(sample_group_path, involve_brca, group_reverse){
-  sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+#   return(dataDEGsFiltLevel)
+# }
+# run_edgeR_pancan <- function(sample_group_path, involve_brca, group_reverse){
+#   sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
     
-  # group convert
-  if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
+#   # group convert
+#   if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
     
-  study_list <- tcga_available()$Study_Abbreviation[-34] %>% 
-    lapply(X = ., FUN = function(value){
-      paste0("TCGA-", value) %>% return()
-    }) %>% as.character()
+#   study_list <- tcga_available()$Study_Abbreviation[-34] %>% 
+#     lapply(X = ., FUN = function(value){
+#       paste0("TCGA-", value) %>% return()
+#     }) %>% as.character()
   
-  if(!involve_brca){
-    study_list <- study_list[study_list != 'TCGA-BRCA']
-  }
+#   if(!involve_brca){
+#     study_list <- study_list[study_list != 'TCGA-BRCA']
+#   }
   
-  suppressMessages({
-    tcga_mrna <- mclapply(X = study_list, FUN = function(type){
+#   suppressMessages({
+#     tcga_mrna <- mclapply(X = study_list, FUN = function(type){
       
-      error_occur <- FALSE
-      tryCatch(
-        expr = {
-          query <- GDCquery(project = type, 
-                            data.category = "Gene expression",
-                            data.type = "Gene expression quantification",
-                            experimental.strategy = "RNA-Seq",
-                            platform = "Illumina HiSeq",
-                            file.type = "results",
-                            barcode = sample_group %>% pull(1), 
-                            legacy = TRUE)
-          # Download a list of barcodes with platform IlluminaHiSeq_RNASeqV2
-          GDCdownload(query)
+#       error_occur <- FALSE
+#       tryCatch(
+#         expr = {
+#           query <- GDCquery(project = type, 
+#                             data.category = "Gene expression",
+#                             data.type = "Gene expression quantification",
+#                             experimental.strategy = "RNA-Seq",
+#                             platform = "Illumina HiSeq",
+#                             file.type = "results",
+#                             barcode = sample_group %>% pull(1), 
+#                             legacy = TRUE)
+#           # Download a list of barcodes with platform IlluminaHiSeq_RNASeqV2
+#           GDCdownload(query)
           
-          # rsem.genes.results as values
-          RnaseqSE <- GDCprepare(query)
+#           # rsem.genes.results as values
+#           RnaseqSE <- GDCprepare(query)
           
-        },
-        error = function(e) { 
-          error_occur <<- TRUE
-        }
-      )
+#         },
+#         error = function(e) { 
+#           error_occur <<- TRUE
+#         }
+#       )
       
-      if(error_occur){
-        return(NULL)
-      } else {
-        RnaseqSE %>%
-          assay() %>% 
-          as.data.frame() %>% 
-          rownames_to_column(var = "gene") %>% return()
-      }
+#       if(error_occur){
+#         return(NULL)
+#       } else {
+#         RnaseqSE %>%
+#           assay() %>% 
+#           as.data.frame() %>% 
+#           rownames_to_column(var = "gene") %>% return()
+#       }
       
-    }, mc.cores = 20)
+#     }, mc.cores = 20)
     
-    # inner join
-    reduce_join <- function(left, right){
-      if(is.null(right)){
-        return(left)
-      } else{
-        inner_join(left, right, by = "gene") %>% return()
-      }
-    }
-    tcga_mrna_join <- purrr::reduce(tcga_mrna, reduce_join) %>% 
-      column_to_rownames(var = "gene") %>% as.matrix()
+#     # inner join
+#     reduce_join <- function(left, right){
+#       if(is.null(right)){
+#         return(left)
+#       } else{
+#         inner_join(left, right, by = "gene") %>% return()
+#       }
+#     }
+#     tcga_mrna_join <- purrr::reduce(tcga_mrna, reduce_join) %>% 
+#       column_to_rownames(var = "gene") %>% as.matrix()
     
-    # normalization of genes # ~ 10 min
-    dataNorm <- TCGAanalyze_Normalization(tabDF = tcga_mrna_join, geneInfo =  geneInfo)
+#     # normalization of genes # ~ 10 min
+#     dataNorm <- TCGAanalyze_Normalization(tabDF = tcga_mrna_join, geneInfo =  geneInfo)
     
-    # subgroup names
-    sub0 <- sample_group %>% filter(km_tsne1 == 0) %>% pull(1)
-    sub1 <- sample_group %>% filter(km_tsne1 == 1) %>% pull(1)
+#     # subgroup names
+#     sub0 <- sample_group %>% filter(km_tsne1 == 0) %>% pull(1)
+#     sub1 <- sample_group %>% filter(km_tsne1 == 1) %>% pull(1)
     
-    sample_subgroup <- tcga_mrna_join %>% colnames() %>% lapply(X = ., FUN = function(value){
+#     sample_subgroup <- tcga_mrna_join %>% colnames() %>% lapply(X = ., FUN = function(value){
       
-      value_trans <- str_extract_all(value, pattern = "TCGA-[:alnum:]+-[:alnum:]+-[:digit:]+") %>%  unlist()
-      subgroup_df <- tibble(sample_barcode = NA, subgroup = NA, .rows = 0)
+#       value_trans <- str_extract_all(value, pattern = "TCGA-[:alnum:]+-[:alnum:]+-[:digit:]+") %>%  unlist()
+#       subgroup_df <- tibble(sample_barcode = NA, subgroup = NA, .rows = 0)
       
       
-      if(value_trans %in% sub0){
-        subgroup_df <- tibble(sample_barcode = value, subgroup = 0)
-      } else {
-        subgroup_df <- tibble(sample_barcode = value, subgroup = 1)
-      }
+#       if(value_trans %in% sub0){
+#         subgroup_df <- tibble(sample_barcode = value, subgroup = 0)
+#       } else {
+#         subgroup_df <- tibble(sample_barcode = value, subgroup = 1)
+#       }
       
-      return(subgroup_df)
+#       return(subgroup_df)
       
-    }) %>% bind_rows()
+#     }) %>% bind_rows()
     
-    sub0_name <- sample_subgroup %>% filter(subgroup == 0) %>% pull(sample_barcode)
-    sub1_name <- sample_subgroup %>% filter(subgroup == 1) %>% pull(sample_barcode)
+#     sub0_name <- sample_subgroup %>% filter(subgroup == 0) %>% pull(sample_barcode)
+#     sub1_name <- sample_subgroup %>% filter(subgroup == 1) %>% pull(sample_barcode)
     
-    # quantile filter of genes
-    dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
-                                      method = "quantile", 
-                                      qnt.cut =  0.25)
+#     # quantile filter of genes
+#     dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
+#                                       method = "quantile", 
+#                                       qnt.cut =  0.25)
     
-    #Diff.expr.analysis (DEA) # ~ 20min
-    dataDEGs <- TCGAanalyze_DEA(mat1 = dataFilt[,sub0_name],
-                                mat2 = dataFilt[,sub1_name],
-                                Cond1type = "Sub-0",
-                                Cond2type = "Sub-1",
-                                fdr.cut = 0.01 ,
-                                logFC.cut = 1,
-                                method = "glmLRT",
-                                paired = F)
+#     #Diff.expr.analysis (DEA) # ~ 20min
+#     dataDEGs <- TCGAanalyze_DEA(mat1 = dataFilt[,sub0_name],
+#                                 mat2 = dataFilt[,sub1_name],
+#                                 Cond1type = "Sub-0",
+#                                 Cond2type = "Sub-1",
+#                                 fdr.cut = 0.01 ,
+#                                 logFC.cut = 1,
+#                                 method = "glmLRT",
+#                                 paired = F)
     
-    # DEGs table with expression values in normal and tumor samples
-    dataDEGsFiltLevel <- TCGAanalyze_LevelTab(dataDEGs,"Sub-0","Sub-1",
-                                              dataFilt[,sub0_name],dataFilt[,sub1_name])    
-  })  
+#     # DEGs table with expression values in normal and tumor samples
+#     dataDEGsFiltLevel <- TCGAanalyze_LevelTab(dataDEGs,"Sub-0","Sub-1",
+#                                               dataFilt[,sub0_name],dataFilt[,sub1_name])    
+#   })  
   
   
   
-  return(dataDEGsFiltLevel)
-}
+#   return(dataDEGsFiltLevel)
+# }
 
 run_deseq_normal <- function(pr_name, rdata_path, deg_path, batch_removal){
   register(MulticoreParam(20))
@@ -268,7 +268,7 @@ run_deseq_normal <- function(pr_name, rdata_path, deg_path, batch_removal){
 
       save(RnaseqSE, file = paste0(rdata_path, pr_name, "_RnaseqSE_normal.RData"))
 
-      Rnaseq_CorOutliers <- assay(RnaseqSE) # to matrix
+      Rnaseq_CorOutliers <- assay(RnaseqSE, "raw_count") # to matrix
 
       # normalization of genes, # quantile filter of genes
       dataNorm <- TCGAanalyze_Normalization(tabDF = Rnaseq_CorOutliers, geneInfo =  geneInfo)
@@ -300,6 +300,7 @@ run_deseq_normal <- function(pr_name, rdata_path, deg_path, batch_removal){
     metadata$group <- factor(metadata$group, levels = c("NT", "TP"))
 
     tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
+    tcga_se$group <- relevel(tcga_se$group, ref = "NT")
     tcga_deseq <- DESeq(tcga_se, parallel = TRUE)
 
     # Hidden Batch effect remove
@@ -319,8 +320,8 @@ run_deseq_normal <- function(pr_name, rdata_path, deg_path, batch_removal){
         tcga_deseq <- DESeq(tcga_se_batch, parallel = TRUE)
     }
       
-    tcga_deseq_result <- results(tcga_deseq, contrast=c("group", "TP", "NT"))
-    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "TP", "NT"))    
+    tcga_deseq_result <- results(tcga_deseq)
+    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE)    
       
     # volcano plot
     p <- EnhancedVolcano(tcga_deseq_result,
@@ -363,7 +364,7 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, fil
         
         save(RnaseqSE, file = paste0(rdata_path, pr_name, "_RnaseqSE.RData"))
         
-        Rnaseq_CorOutliers <- assay(RnaseqSE) # to matrix
+        Rnaseq_CorOutliers <- assay(RnaseqSE, "raw_count") # to matrix
 
         # normalization of genes, # quantile filter of genes
         dataNorm <- TCGAanalyze_Normalization(tabDF = Rnaseq_CorOutliers, geneInfo =  geneInfo)
@@ -386,6 +387,7 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, fil
     metadata$group <- factor(metadata$group, levels = c("Sub0", "Sub1"))
     
     tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
+    tcga_se$group <- relevel(tcga_se$group, ref = "Sub0")
     tcga_deseq <- DESeq(tcga_se, parallel = TRUE)
     
     # Hidden Batch effect remove
@@ -405,8 +407,8 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, fil
         tcga_deseq <- DESeq(tcga_se_batch, parallel = TRUE)
     }  
     
-    tcga_deseq_result <- results(tcga_deseq, contrast=c("group", "Sub1", "Sub0"))
-    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "Sub1", "Sub0"))
+    tcga_deseq_result <- results(tcga_deseq)
+    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE)
     
     # volcano plot
     p <- EnhancedVolcano(tcga_deseq_result,
@@ -424,123 +426,123 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, fil
   
   return(tcga_deseq_result_tidy)
 }
-run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse, batch_removal){
-  register(MulticoreParam(5))
-  sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+# run_deseq_pancan <- function(sample_group_path, involve_brca, group_reverse, batch_removal){
+#   register(MulticoreParam(5))
+#   sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
     
-  # group convert
-  if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
+#   # group convert
+#   if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}
     
-  study_list <- tcga_available()$Study_Abbreviation[-34] %>% 
-    lapply(X = ., FUN = function(value){
-      paste0("TCGA-", value) %>% return()
-    }) %>% as.character()
+#   study_list <- tcga_available()$Study_Abbreviation[-34] %>% 
+#     lapply(X = ., FUN = function(value){
+#       paste0("TCGA-", value) %>% return()
+#     }) %>% as.character()
   
-  if(!involve_brca){
-    study_list <- study_list[study_list != 'TCGA-BRCA']
-  }
+#   if(!involve_brca){
+#     study_list <- study_list[study_list != 'TCGA-BRCA']
+#   }
   
-  suppressMessages({
-    tcga_mrna <- mclapply(X = study_list, FUN = function(type){
+#   suppressMessages({
+#     tcga_mrna <- mclapply(X = study_list, FUN = function(type){
       
-      error_occur <- FALSE
-      tryCatch(
-        expr = {
-          query <- GDCquery(project = type, 
-                            data.category = "Gene expression",
-                            data.type = "Gene expression quantification",
-                            experimental.strategy = "RNA-Seq",
-                            platform = "Illumina HiSeq",
-                            file.type = "results",
-                            barcode = sample_group %>% pull(1), 
-                            legacy = TRUE)
-          # Download a list of barcodes with platform IlluminaHiSeq_RNASeqV2
-          GDCdownload(query)
+#       error_occur <- FALSE
+#       tryCatch(
+#         expr = {
+#           query <- GDCquery(project = type, 
+#                             data.category = "Gene expression",
+#                             data.type = "Gene expression quantification",
+#                             experimental.strategy = "RNA-Seq",
+#                             platform = "Illumina HiSeq",
+#                             file.type = "results",
+#                             barcode = sample_group %>% pull(1), 
+#                             legacy = TRUE)
+#           # Download a list of barcodes with platform IlluminaHiSeq_RNASeqV2
+#           GDCdownload(query)
           
-          # rsem.genes.results as values
-          RnaseqSE <- GDCprepare(query)
+#           # rsem.genes.results as values
+#           RnaseqSE <- GDCprepare(query)
           
-        },
-        error = function(e) { 
-          error_occur <<- TRUE
-        }
-      )
+#         },
+#         error = function(e) { 
+#           error_occur <<- TRUE
+#         }
+#       )
       
-      if(error_occur){
-        return(NULL)
-      } else {
-        RnaseqSE %>%
-          assay() %>% 
-          as.data.frame() %>% 
-          rownames_to_column(var = "gene") %>% return()
-      }
+#       if(error_occur){
+#         return(NULL)
+#       } else {
+#         RnaseqSE %>%
+#           assay() %>% 
+#           as.data.frame() %>% 
+#           rownames_to_column(var = "gene") %>% return()
+#       }
       
-    }, mc.cores = 20)
+#     }, mc.cores = 20)
     
-    # inner join
-    reduce_join <- function(left, right){
-      if(is.null(right)){
-        return(left)
-      } else{
-        inner_join(left, right, by = "gene") %>% return()
-      }
-    }
-    tcga_mrna_join <- purrr::reduce(tcga_mrna, reduce_join) %>% 
-      column_to_rownames(var = "gene") %>% as.matrix()
+#     # inner join
+#     reduce_join <- function(left, right){
+#       if(is.null(right)){
+#         return(left)
+#       } else{
+#         inner_join(left, right, by = "gene") %>% return()
+#       }
+#     }
+#     tcga_mrna_join <- purrr::reduce(tcga_mrna, reduce_join) %>% 
+#       column_to_rownames(var = "gene") %>% as.matrix()
     
-    # normalization of genes, # quantile filter of genes
-    dataNorm <- TCGAanalyze_Normalization(tabDF = tcga_mrna_join, geneInfo =  geneInfo)
-    dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
-                                      method = "quantile", 
-                                      qnt.cut =  0.25)
+#     # normalization of genes, # quantile filter of genes
+#     dataNorm <- TCGAanalyze_Normalization(tabDF = tcga_mrna_join, geneInfo =  geneInfo)
+#     dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
+#                                       method = "quantile", 
+#                                       qnt.cut =  0.25)
     
-    # metadata
-    metadata <- tibble(sample = RnaseqSE$sample_submitter_id, barcode = RnaseqSE$barcode) %>% 
-      mutate(sample = str_extract_all(sample, pattern = "TCGA-[:alnum:]+-[:alnum:]+-[:digit:]+") %>% unlist()) %>% 
-      left_join(x = ., y = sample_group, by = "sample") %>% 
-      mutate(group = ifelse(group == 0, "Sub0", "Sub1"))
-    metadata$group <- factor(metadata$group, levels = c("Sub0", "Sub1"))
+#     # metadata
+#     metadata <- tibble(sample = RnaseqSE$sample_submitter_id, barcode = RnaseqSE$barcode) %>% 
+#       mutate(sample = str_extract_all(sample, pattern = "TCGA-[:alnum:]+-[:alnum:]+-[:digit:]+") %>% unlist()) %>% 
+#       left_join(x = ., y = sample_group, by = "sample") %>% 
+#       mutate(group = ifelse(group == 0, "Sub0", "Sub1"))
+#     metadata$group <- factor(metadata$group, levels = c("Sub0", "Sub1"))
     
-    tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
-    tcga_deseq <- DESeq(tcga_se)
+#     tcga_se <- DESeqDataSetFromMatrix(countData = dataFilt, colData = metadata, design = ~ group)
+#     tcga_deseq <- DESeq(tcga_se)
     
-    # Hidden Batch effect remove
-    if(batch_removal){
-        # hidden batch removal
-        dat <- counts(tcga_deseq, normalized=TRUE)
-        mod <- model.matrix(~ group, colData(tcga_deseq))
-        mod0 <- model.matrix(~ 1, colData(tcga_deseq))
+#     # Hidden Batch effect remove
+#     if(batch_removal){
+#         # hidden batch removal
+#         dat <- counts(tcga_deseq, normalized=TRUE)
+#         mod <- model.matrix(~ group, colData(tcga_deseq))
+#         mod0 <- model.matrix(~ 1, colData(tcga_deseq))
         
-        # run sva
-        svseq <- svaseq(dat, mod, mod0, n.sv=2)
-        tcga_se_batch <-tcga_se
+#         # run sva
+#         svseq <- svaseq(dat, mod, mod0, n.sv=2)
+#         tcga_se_batch <-tcga_se
 
-        tcga_se_batch$SV1 <- svseq$sv[,1]
-        tcga_se_batch$SV2 <- svseq$sv[,2]
-        design(tcga_se_batch) <- ~ SV1 + SV2 + group
-        tcga_deseq <- DESeq(tcga_se_batch, parallel = TRUE)
-    }      
+#         tcga_se_batch$SV1 <- svseq$sv[,1]
+#         tcga_se_batch$SV2 <- svseq$sv[,2]
+#         design(tcga_se_batch) <- ~ SV1 + SV2 + group
+#         tcga_deseq <- DESeq(tcga_se_batch, parallel = TRUE)
+#     }      
     
-    tcga_deseq_result <- results(tcga_deseq, tidy = T, contrast=c("group", "Sub1", "Sub0"))
-    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "Sub1", "Sub0"))
+#     tcga_deseq_result <- results(tcga_deseq, tidy = T, contrast=c("group", "Sub1", "Sub0"))
+#     tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE, contrast=c("group", "Sub1", "Sub0"))
     
-    # volcano plot
-    p <- EnhancedVolcano(tcga_deseq_result,
-                    lab = rownames(tcga_deseq_result),
-                    x = 'log2FoldChange',
-                    y = 'padj',
-                    title = 'SubGroup-0 versus SubGroup-1',
-                    pCutoff = 0.05,
-                    FCcutoff = 1.5,
-                    pointSize = 3.0,
-                    labSize = 6.0)
+#     # volcano plot
+#     p <- EnhancedVolcano(tcga_deseq_result,
+#                     lab = rownames(tcga_deseq_result),
+#                     x = 'log2FoldChange',
+#                     y = 'padj',
+#                     title = 'SubGroup-0 versus SubGroup-1',
+#                     pCutoff = 0.05,
+#                     FCcutoff = 1.5,
+#                     pointSize = 3.0,
+#                     labSize = 6.0)
 
-    ggsave(plot = p, filename = paste0(deg_path, pr_name, "_DESEQ2_", file_name, "_volcano.png"), height = 8, width = 12, dpi = 70) 
+#     ggsave(plot = p, filename = paste0(deg_path, pr_name, "_DESEQ2_", file_name, "_volcano.png"), height = 8, width = 12, dpi = 70) 
     
-  })  
+#   })  
   
-  return(tcga_deseq_result_tidy)
-}
+#   return(tcga_deseq_result_tidy)
+# }
 stand_alone_deg <- function(cancer_type, subgroup_path, deg_path){
   subgroup_file_list <- list.files(subgroup_path)
   

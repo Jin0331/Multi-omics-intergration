@@ -12,10 +12,12 @@ deg/
 best_deg/
 src/.ipynb_checkpoints/
 src/__pycache__
+src/legacy
 .ipynb_checkpoints/
 GDCdata/
 result/
 RESULT/
+
 
 
 # History files

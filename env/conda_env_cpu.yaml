@@ -2,7 +2,6 @@ name: multiomics-cpu
 channels:
   - bioconda
   - conda-forge
-  - r
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
@@ -67,10 +66,10 @@ dependencies:
   - bwidget=1.9.14=ha770c72_1
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0
-  - ca-certificates=2021.10.8=ha878542_0
+  - ca-certificates=2022.3.29=h06a4308_0
   - cachetools=4.2.4=pyhd8ed1ab_0
   - cairo=1.16.0=ha00ac49_1009
-  - certifi=2021.10.8=py38h578d9bd_1
+  - certifi=2021.10.8=py38h06a4308_2
   - cffi=1.15.0=py38h3931269_0
   - charset-normalizer=2.0.10=pyhd8ed1ab_0
   - click=8.0.3=py38h578d9bd_1
@@ -101,6 +100,7 @@ dependencies:
   - google-auth-oauthlib=0.4.6=pyhd8ed1ab_0
   - google-pasta=0.2.0=pyh8c360ce_0
   - graphite2=1.3.13=h58526e2_1001
+  - greenlet=1.1.1=py38h295c915_0
   - grpcio=1.43.0=py38h2457d08_0
   - gsl=2.7=he838d99_0
   - gxx_impl_linux-64=9.4.0=h03d3576_11
@@ -137,6 +137,7 @@ dependencies:
   - libgcc-ng=11.2.0=h1d223b6_11
   - libgfortran-ng=11.2.0=h69a702a_11
   - libgfortran5=11.2.0=h5c6108e_11
+  - libgit2=1.4.2=h4c07d5c_0
   - libglib=2.70.2=h174f98d_1
   - libgomp=11.2.0=h1d223b6_11
   - libiconv=1.16=h516909a_0
@@ -173,7 +174,7 @@ dependencies:
   - oauthlib=3.1.1=pyhd8ed1ab_0
   - olefile=0.46=pyh9f0ad1d_1
   - openjpeg=2.4.0=hb52868f_1
-  - openssl=3.0.0=h7f98852_2
+  - openssl=3.0.2=h166bdaf_1
   - opt_einsum=3.3.0=pyhd8ed1ab_1
   - packaging=21.3=pyhd8ed1ab_0
   - pandas=1.4.0=py38h43a58ef_0
@@ -193,6 +194,7 @@ dependencies:
   - pyasn1-modules=0.2.7=py_0
   - pycparser=2.21=pyhd8ed1ab_0
   - pyjwt=2.3.0=pyhd8ed1ab_1
+  - pymysql=1.0.2=py38h06a4308_1
   - pyopenssl=21.0.0=pyhd8ed1ab_0
   - pyparsing=3.0.7=pyhd8ed1ab_0
   - pysocks=1.7.1=py38h578d9bd_4
@@ -219,6 +221,7 @@ dependencies:
   - r-bitops=1.0_7=r41hcfec24a_0
   - r-blob=1.2.2=r41hc72bb7e_0
   - r-boot=1.3_28=r41hc72bb7e_0
+  - r-brew=1.0_7=r41hc72bb7e_0
   - r-brio=1.1.3=r41hcfec24a_0
   - r-broom=0.7.11=r41hc72bb7e_0
   - r-cachem=1.0.6=r41hcfec24a_0
@@ -233,21 +236,26 @@ dependencies:
   - r-clipr=0.7.1=r41hc72bb7e_0
   - r-codetools=0.2_18=r41hc72bb7e_0
   - r-colorspace=2.0_2=r41hcfec24a_0
+  - r-commonmark=1.8.0=r41h06615bd_0
   - r-conquer=1.2.1=r41h6dc32e9_0
   - r-corrplot=0.92=r41hc72bb7e_0
+  - r-covr=3.5.1=r41h03ef668_0
   - r-cowplot=1.1.1=r41hc72bb7e_0
   - r-cpp11=0.4.2=r41hc72bb7e_0
   - r-crayon=1.4.2=r41hc72bb7e_0
+  - r-credentials=1.3.2=r41hc72bb7e_0
   - r-crosstalk=1.2.0=r41hc72bb7e_0
   - r-curl=4.3.2=r41hcfec24a_0
   - r-data.table=1.14.2=r41hcfec24a_0
   - r-dbi=1.1.2=r41hc72bb7e_0
   - r-dbplyr=2.1.1=r41hc72bb7e_0
   - r-desc=1.4.0=r41hc72bb7e_0
+  - r-devtools=2.4.3=r41hc72bb7e_0
   - r-diffobj=0.3.5=r41hcfec24a_0
   - r-digest=0.6.29=r41h03ef668_0
   - r-downloader=0.4=r41hc72bb7e_1003
   - r-dplyr=1.0.7=r41h03ef668_0
+  - r-dt=0.22=r41hc72bb7e_0
   - r-dtplyr=1.2.1=r41hc72bb7e_0
   - r-e1071=1.7_9=r41h03ef668_0
   - r-ellipsis=0.3.2=r41hcfec24a_0
@@ -270,6 +278,7 @@ dependencies:
   - r-future.apply=1.8.1=r41hc72bb7e_0
   - r-gargle=1.2.0=r41hc72bb7e_0
   - r-generics=0.1.1=r41hc72bb7e_0
+  - r-gert=1.5.0=r41h30f61c7_1
   - r-ggalt=0.4.0=r41ha770c72_2
   - r-ggbeeswarm=0.6.0=r41ha770c72_1003
   - r-ggplot2=3.3.5=r41hc72bb7e_0
@@ -279,6 +288,9 @@ dependencies:
   - r-ggsci=2.9=r41hc72bb7e_1003
   - r-ggsignif=0.6.3=r41hc72bb7e_0
   - r-ggtext=0.1.1=r41hc72bb7e_0
+  - r-gh=1.3.0=r41hc72bb7e_0
+  - r-git2r=0.30.1=r41hf72769b_0
+  - r-gitcreds=0.1.1=r41hc72bb7e_0
   - r-globals=0.14.0=r41hc72bb7e_0
   - r-glue=1.6.1=r41hcfec24a_0
   - r-googledrive=2.0.0=r41hc72bb7e_0
@@ -296,6 +308,7 @@ dependencies:
   - r-httr=1.4.2=r41hc72bb7e_0
   - r-hwriter=1.3.2=r41hc72bb7e_1003
   - r-ids=1.0.1=r41hc72bb7e_1
+  - r-ini=0.3.1=r41hc72bb7e_1003
   - r-ipred=0.9_12=r41hcfec24a_0
   - r-isoband=0.2.5=r41h03ef668_0
   - r-iterators=1.0.13=r41hc72bb7e_0
@@ -345,6 +358,7 @@ dependencies:
   - r-parallelly=1.30.0=r41hc72bb7e_0
   - r-pbkrtest=0.5.1=r41hc72bb7e_0
   - r-pillar=1.6.5=r41hc72bb7e_0
+  - r-pkgbuild=1.3.1=r41hc72bb7e_0
   - r-pkgconfig=2.0.3=r41hc72bb7e_1
   - r-pkgload=1.2.4=r41h03ef668_0
   - r-plogr=0.2.0=r41hc72bb7e_1003
@@ -372,6 +386,7 @@ dependencies:
   - r-ragg=1.2.1=r41h35ef149_0
   - r-ranger=0.13.1=r41h03ef668_0
   - r-rappdirs=0.3.3=r41hcfec24a_0
+  - r-rcmdcheck=1.4.0=r41h785f33e_0
   - r-rcolorbrewer=1.1_2=r41h785f33e_1003
   - r-rcpp=1.0.8=r41h03ef668_0
   - r-rcpparmadillo=0.10.8.1.0=r41h306847c_0
@@ -382,22 +397,27 @@ dependencies:
   - r-recipes=0.1.17=r41hc72bb7e_0
   - r-rematch=1.0.1=r41hc72bb7e_1004
   - r-rematch2=2.1.2=r41hc72bb7e_1
+  - r-remotes=2.4.2=r41hc72bb7e_0
   - r-reprex=2.0.1=r41hc72bb7e_0
   - r-reshape2=1.4.4=r41h03ef668_1
   - r-restfulr=0.0.13=r41hdf9a8c9_1
+  - r-rex=1.2.1=r41hc72bb7e_0
   - r-rio=0.5.29=r41hc72bb7e_0
   - r-rjson=0.2.21=r41h03ef668_0
   - r-rlang=0.4.12=r41hcfec24a_0
   - r-rmarkdown=2.11=r41hc72bb7e_1
+  - r-roxygen2=7.1.2=r41h03ef668_0
   - r-rpart=4.1.16=r41hcfec24a_0
   - r-rprojroot=2.0.2=r41hc72bb7e_0
   - r-rsqlite=2.2.8=r41h03ef668_0
   - r-rstatix=0.7.0=r41hc72bb7e_0
   - r-rstudioapi=0.13=r41hc72bb7e_0
   - r-rttf2pt1=1.3.10=r41hcfec24a_0
+  - r-rversions=2.1.1=r41hc72bb7e_0
   - r-rvest=1.0.2=r41hc72bb7e_0
   - r-scales=1.1.1=r41hc72bb7e_0
   - r-selectr=0.4_2=r41hc72bb7e_1
+  - r-sessioninfo=1.2.2=r41hc72bb7e_0
   - r-snow=0.4_4=r41hc72bb7e_0
   - r-sp=1.4_6=r41hcfec24a_0
   - r-sparsem=1.81=r41h859d828_0
@@ -419,6 +439,7 @@ dependencies:
   - r-timedate=3043.102=r41hc72bb7e_1002
   - r-tinytex=0.36=r41hc72bb7e_0
   - r-tzdb=0.2.0=r41h03ef668_0
+  - r-usethis=2.1.5=r41hc72bb7e_0
   - r-utf8=1.2.2=r41hcfec24a_0
   - r-uuid=1.0_3=r41hcfec24a_0
   - r-vctrs=0.3.8=r41hcfec24a_1
@@ -426,10 +447,12 @@ dependencies:
   - r-viridislite=0.4.0=r41hc72bb7e_0
   - r-vroom=1.5.7=r41h03ef668_0
   - r-waldo=0.3.1=r41hc72bb7e_0
+  - r-whisker=0.4=r41hc72bb7e_1
   - r-withr=2.4.3=r41hc72bb7e_0
   - r-xfun=0.29=r41h03ef668_0
   - r-xml=3.99_0.8=r41hcfec24a_0
   - r-xml2=1.3.3=r41h03ef668_0
+  - r-xopen=1.0.0=r41hc72bb7e_1003
   - r-xtable=1.8_4=r41hc72bb7e_3
   - r-yaml=2.2.2=r41hcfec24a_0
   - r-zip=2.2.0=r41hcfec24a_0
@@ -447,6 +470,7 @@ dependencies:
   - setuptools=60.5.0=py38h578d9bd_0
   - simplegeneric=0.8.1=py_1
   - six=1.16.0=pyh6c4a22f_0
+  - sqlalchemy=1.4.32=py38h7f8727e_0
   - sqlite=3.37.0=h9cd32fc_0
   - statsmodels=0.13.1=py38h6c62de6_0
   - sysroot_linux-64=2.12=he073ed8_15

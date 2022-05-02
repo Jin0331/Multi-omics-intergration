@@ -828,9 +828,7 @@ def feature_selection_svm(data_type, o):
 def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_name, rdata_path, batch_removal, raw_path):
     r = ro.r
     r['source']('src/r-function.R')
-    run_edgeR_r = ro.globalenv['run_edgeR']
-    run_deseq_r = ro.globalenv['run_deseq']
-    
+
     group_reverse = group_convert(sample_group, raw_path)
     
     # R DF to pandas DF
@@ -840,6 +838,7 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
     
     ## EdgeR
     if method == "edger" or method == "all":
+        run_edgeR_r = ro.globalenv['run_edgeR']
         edger = run_edgeR_r(cancer_type, sample_group, rdata_path, group_reverse)
         with localconverter(ro.default_converter + pandas2ri.converter):
             edger = ro.conversion.rpy2py(edger)
@@ -851,6 +850,7 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
     
     if method == "deseq2" or method == "all":
     ## Deseq2
+        run_deseq_r = ro.globalenv['run_deseq']
         deseq = run_deseq_r(cancer_type, sample_group, rdata_path, group_reverse, file_name, deg_path, batch_removal)
         with localconverter(ro.default_converter + pandas2ri.converter):
             deseq = ro.conversion.rpy2py(deseq)

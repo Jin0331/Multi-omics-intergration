@@ -31,3 +31,5 @@ example : python src/Multi-omics-integration-analysis.py \
          -c COAD
 
 ```
+
+```@ wmbio.co```

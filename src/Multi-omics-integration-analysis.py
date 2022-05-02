@@ -17,8 +17,8 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--base', required=True, type=str, help='Root Path')
     parser.add_argument('-c', '--cancer', required=True, type=str, help='Types of cancer')
     parser.add_argument('-d', '--dea', default="deseq2", type=str, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
-    parser.add_argument('-l', '--logfc', default=1, type=int, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
-    parser.add_argument('-f', '--fdr', default=0.05, type=int, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
+    parser.add_argument('-l', '--logfc', default=0, type=int, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
+    parser.add_argument('-f', '--fdr', default=0.1, type=int, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
 
     static_args = parser.parse_args()
 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     elif METHOD == 'deseq2' :
         dea_combine = list(map(lambda d : d[["row", "log2FoldChange"]], dea_result))
         dea_combine = [col_rename(dea_combine[index], index, bestSubgroup) for index in range(len(dea_combine))]
-        dea_combine = reduce(lambda left, right : pd.merge(left, right, left_on='gene', right_on='gene', how = 'inner'), dea_combine)
+        dea_combine = reduce(lambda left, right : pd.merge(left, right, left_on='gene', right_on='gene', how = 'outer'), dea_combine)
 
     # median & mean
     dea_combine["SubGroup-log2FC_median"] = dea_combine.iloc[:, 1:].median(axis=1)

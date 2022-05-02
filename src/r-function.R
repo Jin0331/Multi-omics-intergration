@@ -334,7 +334,7 @@ run_deseq_normal <- function(pr_name, rdata_path, deg_path, batch_removal){
                     pointSize = 3.0,
                     labSize = 6.0)
 
-    ggsave(plot = p, filename = paste0(deg_path, pr_name, "_DESEQ2_normal_volcano.png"), height = 8, width = 12, dpi = 70)    
+    ggsave(plot = p, filename = paste0(deg_path, pr_name, "_volcano/", pr_name, "_DESEQ2_normal_volcano.png"), height = 8, width = 12, dpi = 70)    
   })  
   
   return(tcga_deseq_result_tidy)
@@ -421,7 +421,7 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, fil
                     pointSize = 3.0,
                     labSize = 6.0)
 
-    ggsave(plot = p, filename = paste0(deg_path, pr_name, "_DESEQ2_", file_name, "_volcano.png"), height = 8, width = 12, dpi = 70)    
+    ggsave(plot = p, filename = paste0(deg_path, pr_name, "_volcano/", pr_name, "_DESEQ2_", file_name, "_volcano.png"), height = 8, width = 12, dpi = 70)    
   })  
   
   return(tcga_deseq_result_tidy)

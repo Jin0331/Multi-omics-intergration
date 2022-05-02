@@ -834,6 +834,7 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
     # R DF to pandas DF
     Path(deg_path).mkdir(parents=True, exist_ok=True)
     Path(deg_path+cancer_type).mkdir(parents=True, exist_ok=True)
+    Path(deg_path+cancer_type+"_volcano").mkdir(parents=True, exist_ok=True)
     Path(rdata_path).mkdir(parents=True, exist_ok=True)
     
     ## EdgeR

@@ -17,9 +17,8 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--base', required=True, type=str, help='Root Path')
     parser.add_argument('-c', '--cancer', required=True, type=str, help='Types of cancer')
     parser.add_argument('-d', '--dea', default="deseq2", type=str, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
-    parser.add_argument('-l', '--logfc', default=0, type=int, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
-    parser.add_argument('-f', '--fdr', default=0.1, type=int, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
-
+    parser.add_argument('-l', '--logfc', default=1, type=float, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
+    parser.add_argument('-f', '--fdr', default=0.05, type=float, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
     static_args = parser.parse_args()
 
     # file path
@@ -43,7 +42,7 @@ if __name__ == "__main__":
     group_score = pd.read_csv(GROUP_VALIDATION_PATH + CANCER_TYPE + '_validation.csv', usecols=col)
     
     # Q3 value
-    SILHOUETTE = group_score.Silhouette.quantile(.25)
+    SILHOUETTE = group_score.Silhouette.quantile(.7)
     RNA_ANOVA = group_score.RNA_ANOVA_F1.quantile(.7)
     RNA_RF = group_score.RNA_RF_F1.quantile(.7)
     MIRNA_ANOVAR = group_score.miRNA_ANOVA_F1.quantile(.7)
@@ -84,6 +83,10 @@ if __name__ == "__main__":
         
         if os.path.isfile(DEG_PATH + CANCER_TYPE + "/" + DEG_CHECK):
             deg_list = pd.read_csv(DEG_PATH + CANCER_TYPE + "/" + DEG_CHECK, sep = "\t")
+
+            # cut-off
+            deseq_filter = ((deg_list.log2FoldChange <= -(LOGFC)) | (deg_list.log2FoldChange >= LOGFC)) & (deg_list.padj < FDR)
+            deg_list = deg_list.loc[deseq_filter, :]
         else :
             # DEG Extraction
             deg_list = deg_extract(log_fc=LOGFC, fdr=FDR,
@@ -94,7 +97,10 @@ if __name__ == "__main__":
                           method=METHOD,
                           batch_removal=True,
                           raw_path=RAW_PATH)
-        
+            # cut-off
+            deseq_filter = ((deg_list.log2FoldChange <= -(LOGFC)) | (deg_list.log2FoldChange >= LOGFC)) & (deg_list.padj < FDR)
+            deg_list = deg_list.loc[deseq_filter, :]
+
         dea_result.append(deg_list)
         gc.collect()
 
@@ -105,7 +111,7 @@ if __name__ == "__main__":
         dea_combine = [col_rename(dea_combine[index], index, bestSubgroup) for index in range(len(dea_combine))]
         dea_combine = reduce(lambda left, right : pd.merge(left, right, left_on='gene', right_on='gene', how = 'outer'), dea_combine)
     elif METHOD == 'deseq2' :
-        dea_combine = list(map(lambda d : d[["row", "log2FoldChange"]], dea_result))
+        dea_combine = list(map(lambda d : d[["row", "log2FoldChange", "padj"]], dea_result))
         dea_combine = [col_rename(dea_combine[index], index, bestSubgroup) for index in range(len(dea_combine))]
         dea_combine = reduce(lambda left, right : pd.merge(left, right, left_on='gene', right_on='gene', how = 'outer'), dea_combine)
 
@@ -134,4 +140,5 @@ if __name__ == "__main__":
     Path(os.getcwd() + "/RESULT/" + CANCER_TYPE).mkdir(parents=True, exist_ok=True)
     time_stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    result_combine_tm.to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-' + time_stamp +'.csv', index = False)
+    # sort
+    result_combine_tm.sort_values(by = ['gene'], axis = 0).to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-' + time_stamp +'.csv', index = False)

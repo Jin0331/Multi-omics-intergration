@@ -14,46 +14,50 @@ suppressPackageStartupMessages({
 })
 
 survFit <- function(sample_group_path, raw_path){
-  
-  sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
-  
-  # surv data
-  pheno <- read_delim(paste0(raw_path, "/Survival_SupplementalTable_S1_20171025_xena_sp"), 
-                      col_select = c('sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'),
-                      delim = "\t", show_col_types = FALSE)
-  sample_group_surv <- left_join(x = sample_group, y = pheno, by = "sample")
-  
-  fit <- survfit(Surv(time = OS.time, event = OS) ~ group, data = sample_group_surv)
-  summary(fit)$table %>% as.data.frame() %>%
-    return()
+  suppressMessages({
+    sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+    
+    # surv data
+    pheno <- read_delim(paste0(raw_path, "/Survival_SupplementalTable_S1_20171025_xena_sp"), 
+                        col_select = c('sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'),
+                        delim = "\t", show_col_types = FALSE)
+    sample_group_surv <- left_join(x = sample_group, y = pheno, by = "sample")
+    
+    fit <- survfit(Surv(time = OS.time, event = OS) ~ group, data = sample_group_surv)
+    summary(fit)$table %>% as.data.frame() %>%
+      return()
+  })
 }  
 
 # log-rank test
 log_rank_test <- function(df){   
-  # column name extraction
-  df_name <- colnames(df)
-  df_name_filter <- df_name[str_detect(string = df_name, pattern = "Feature")]
-  
-  # log_rank test
-  df_log_rank <- lapply(X = df_name_filter, function(col_name){
-    cox <- coxph(
-      formula = as.formula(paste0("Surv(time = OS.time, event = OS) ~", col_name)), 
-      data = df)
-    cox_result <- summary(cox)
-    tibble(Features = col_name, log_p_value = cox_result$logtest["pvalue"]) %>% return()
-  }) %>% bind_rows()
-  
-  # p-value 0.05 cuttoff
-  df_log_rank %>% 
-    filter(log_p_value < 0.05) %>% 
-    return()
+  suppressMessages({
+    # column name extraction
+    df_name <- colnames(df)
+    df_name_filter <- df_name[str_detect(string = df_name, pattern = "Feature")]
+    
+    # log_rank test
+    df_log_rank <- lapply(X = df_name_filter, function(col_name){
+      cox <- coxph(
+        formula = as.formula(paste0("Surv(time = OS.time, event = OS) ~", col_name)), 
+        data = df)
+      cox_result <- summary(cox)
+      tibble(Features = col_name, log_p_value = cox_result$logtest["pvalue"]) %>% return()
+    }) %>% bind_rows()
+    
+    # p-value 0.05 cuttoff
+    df_log_rank %>% 
+      filter(log_p_value < 0.05) %>% 
+      return()
+  })
 }
 
 # random_forest test
 nb_cluster_test <- function(df){ 
-  
-  nc <- NbClust(df,min.nc=2,max.nc=9,method="kmeans", index = c("silhouette","cindex"))
-  nc$All.index %>% as_tibble() %>% select("Silhouette") %>% return()
+  suppressMessages({
+    nc <- NbClust(df,min.nc=2,max.nc=9,method="kmeans", index = c("silhouette","cindex"))
+    nc$All.index %>% as_tibble() %>% select("Silhouette") %>% return()
+  })
 }
 
 # function
@@ -320,8 +324,11 @@ run_deseq_normal <- function(pr_name, rdata_path, deg_path, batch_removal){
         tcga_deseq <- DESeq(tcga_se_batch, parallel = TRUE)
     }
       
-    tcga_deseq_result <- results(tcga_deseq)
-    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE)    
+    tcga_deseq_result <- results(tcga_deseq, 
+                                 alpha = 0.9999)
+    tcga_deseq_result_tidy <- results(tcga_deseq, 
+                                      alpha = 0.9999,
+                                      tidy = TRUE)
       
     # volcano plot
     p <- EnhancedVolcano(tcga_deseq_result,
@@ -404,11 +411,15 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, fil
         tcga_se_batch$SV1 <- svseq$sv[,1]
         tcga_se_batch$SV2 <- svseq$sv[,2]
         design(tcga_se_batch) <- ~ SV1 + SV2 + group
-        tcga_deseq <- DESeq(tcga_se_batch, parallel = TRUE)
+        tcga_deseq <- DESeq(tcga_se_batch,                                                    
+                            parallel = TRUE)
     }  
     
-    tcga_deseq_result <- results(tcga_deseq)
-    tcga_deseq_result_tidy <- results(tcga_deseq, tidy = TRUE)
+    tcga_deseq_result <- results(tcga_deseq, 
+                                 alpha = 0.9999)
+    tcga_deseq_result_tidy <- results(tcga_deseq, 
+                                      alpha = 0.9999,
+                                      tidy = TRUE)
     
     # volcano plot
     p <- EnhancedVolcano(tcga_deseq_result,

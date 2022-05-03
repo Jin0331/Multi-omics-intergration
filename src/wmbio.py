@@ -20,7 +20,6 @@ else :
     R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics-gpu/lib/R'        
         
 import re
-import gc
 import pickle
 import datetime
 from requests import get
@@ -857,8 +856,8 @@ def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_n
             deseq = ro.conversion.rpy2py(deseq)
         
         # DEG list
-        deseq_filter = ((deseq.log2FoldChange <= -(log_fc)) | (deseq.log2FoldChange >= log_fc)) & (deseq.padj < fdr)
-        deseq = deseq.loc[deseq_filter, :]
+        # deseq_filter = ((deseq.log2FoldChange <= -(log_fc)) | (deseq.log2FoldChange >= log_fc)) & (deseq.padj < fdr)
+        # deseq = deseq.loc[deseq_filter, :]
         deseq.to_csv(deg_path + cancer_type + "/" + cancer_type + "_DESEQ2_" + file_name + ".txt", sep = "\t", index = False)
     
     if method == "deseq2":

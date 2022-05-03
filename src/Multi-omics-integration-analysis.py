@@ -135,7 +135,7 @@ if __name__ == "__main__":
     result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, left_on='gene', right_on='gene', how = 'left')   
 
     # textmining
-    sql = 'SELECT * FROM ' + CANCER_TYPE
+    sql = 'SELECT * FROM Textmining.' + CANCER_TYPE
     tm_df = query_tm_db(sql)
     result_combine_tm = pd.merge(left=result_combine, right=tm_df, left_on="gene", right_on="gene", how='left')
 

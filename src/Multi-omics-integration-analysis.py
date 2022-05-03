@@ -115,6 +115,10 @@ if __name__ == "__main__":
         dea_combine = [col_rename(dea_combine[index], index, bestSubgroup) for index in range(len(dea_combine))]
         dea_combine = reduce(lambda left, right : pd.merge(left, right, left_on='gene', right_on='gene', how = 'outer'), dea_combine)
 
+    # blank row calculation
+    blank_row = dea_combine.loc[:, dea_combine.columns.str.contains("[0-9]_log2FoldChange")].isnull().sum(axis=1) # serise
+    dea_combine['1-blank_ratio'] = blank_row.apply(lambda x : ((1 - (x / 32)) * 100))
+
     # median & mean
     dea_combine["SubGroup-log2FC_median"] = dea_combine.iloc[:, 1:].median(axis=1)
     dea_combine["SubGroup-log2FC_mean"] = dea_combine.iloc[:, 1:].mean(axis=1)
@@ -126,7 +130,7 @@ if __name__ == "__main__":
                                   rdata_path=RDATA_PATH, deg_path=DEG_PATH, batch_removal=True)
 
     nt_tp_deseq2_col = nt_tp_deseq2[['row', 'log2FoldChange', 'pvalue']]
-    nt_tp_deseq2_col.columns = ['gene', 'NT-TP_log2FoldChange', 'pvalue']
+    nt_tp_deseq2_col.columns = ['gene', 'NT-TP_log2FoldChange', 'padj']
 
     result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, left_on='gene', right_on='gene', how = 'left')   
 

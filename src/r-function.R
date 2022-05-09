@@ -101,8 +101,8 @@ dgidb_interaction <- function(gene_name){
       tibble(
         gene = dgidb_element$geneName,
         DGI_GENE_CATEGORY = gene_category, 
-        DGI_COUNT = length(dgidb_element$interactions),
-        `DGI(DRUG_NAME;SCORE;TYPE)` = interaction
+        `DGI(DRUG_NAME;SCORE;TYPE)` = interaction,
+        DGI_COUNT = length(dgidb_element$interactions)
       )  %>% return()
       
     }) %>% bind_rows() 

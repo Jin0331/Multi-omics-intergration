@@ -924,6 +924,18 @@ def query_tm_db(query):
     
     return query_result
 
+def dgidb_extract(gene_list):
+    r = ro.r
+    r['source']('src/r-function.R')
+    dgidb_r = ro.globalenv['dgidb_interaction']
+    
+    dgidb_result = dgidb_r(gene_list)
+    
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        dgidb_result = ro.conversion.rpy2py(dgidb_result)
+        
+    return dgidb_result
+
 
 
 if __name__ == "__main__": 

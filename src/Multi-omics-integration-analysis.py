@@ -123,7 +123,6 @@ if __name__ == "__main__":
     dea_combine["SubGroup-log2FC_median"] = dea_combine.iloc[:, 1:].median(axis=1)
     dea_combine["SubGroup-log2FC_mean"] = dea_combine.iloc[:, 1:].mean(axis=1)
 
-
     # NT vs TP DEA
     # log fc, FDR value 수정
     nt_tp_deseq2 = deg_extract_normal(log_fc=0, pvalue=0.1, cancer_type=CANCER_TYPE, 
@@ -134,10 +133,15 @@ if __name__ == "__main__":
 
     result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, left_on='gene', right_on='gene', how = 'left')   
 
-    # textmining
+    # Textmining
     sql = 'SELECT * FROM Textmining.' + CANCER_TYPE
     tm_df = query_tm_db(sql)
     result_combine_tm = pd.merge(left=result_combine, right=tm_df, left_on="gene", right_on="gene", how='left')
+
+    # DGIdb
+    gene_list = result_combine_tm.loc[:, 'gene'].to_list()
+    result_dgidb = dgidb_extract(gene_list)
+    result_combine_dgidb = pd.merge(left=result_combine_tm, right=result_dgidb, left_on='gene', right_on='gene', how='left')
 
     # Result write
     Path(os.getcwd() + "/RESULT").mkdir(parents=True, exist_ok=True)
@@ -145,4 +149,4 @@ if __name__ == "__main__":
     time_stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # sort
-    result_combine_tm.sort_values(by = ['gene'], axis = 0).to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-' + time_stamp +'.csv', index = False)
+    result_combine_dgidb.sort_values(by = ['gene'], axis = 0).to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-' + time_stamp +'.csv', index = False)

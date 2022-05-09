@@ -51,7 +51,7 @@ if __name__ == "__main__":
     MT_RF = group_score.Methylation_RF_F1.quantile(.7)
 
     # stdout
-    print("SILHOUETTE Q3 : ", SILHOUETTE)
+    print("SILHOUETTE Q2 : ", SILHOUETTE)
     print("RNA_ANOVA Q3 : ", RNA_ANOVA)
     print("RNA_RF Q3 : ", RNA_RF)
     print("MIRNA_ANOVAR Q3 : ", MIRNA_ANOVAR)
@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
     # blank row calculation
     blank_row = dea_combine.loc[:, dea_combine.columns.str.contains("[0-9]_log2FoldChange")].isnull().sum(axis=1) # serise
-    dea_combine['1-blank_ratio'] = blank_row.apply(lambda x : ((1 - (x / 32)) * 100))
+    dea_combine['1-blank_ratio'] = blank_row.apply(lambda x : ((1 - (x / len(bestSubgroup))) * 100))
 
     # median & mean
     dea_combine["SubGroup-log2FC_median"] = dea_combine.iloc[:, 1:].median(axis=1)

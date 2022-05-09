@@ -60,6 +60,48 @@ nb_cluster_test <- function(df){
   })
 }
 
+# DGIdb
+dgidb_interaction <- function(gene_name){
+  base_url <- "https://dgidb.org"
+  request_url <- paste0(base_url, "/api/v2/interactions.json?")
+  payload <-  list(genes = paste0(gene_name, collapse = ","),
+                   fda_approved_drug="true")
+  
+  # output
+  dgidb_result <- POST(request_url, body = payload, encode = "form") %>%  
+    httr::content(encoding = "UTF-8") 
+  
+  lapply(X = dgidb_result$matchedTerms, FUN = function(dgidb_element){
+    gene_category <- dgidb_element$geneCategories %>% 
+      sapply(X = ., FUN = function(value) {value$name}) %>% 
+      paste0(collapse = ",")
+    
+    interaction <- dgidb_element$interactions %>% 
+      sapply(X = ., FUN = function(value){
+        drug_name <- value$drugName
+        score <- value$score
+        types <- value$interactionTypes %>% unlist() %>% paste0(collapse = "&")
+        
+        paste0(c(drug_name, score, types), collapse = ";") %>% 
+          as_tibble() %>% 
+          return()
+        
+        # return(drug_name)  
+      }) %>% unlist() %>% 
+      paste0(., collapse = "&")
+    
+    tibble(
+      GENE_NAME = dgidb_element$geneName,
+      GENE_CATEGORY = gene_category, 
+      DGI_COUNT = length(dgidb_element$interactions),
+      `DGI(DRUG_NAME;SCORE;TYPE)` = interaction
+    )  %>% return()
+    
+  }) %>% bind_rows() %>% 
+    return()
+}
+
+
 # function
 # run_edgeR <- function(pr_name, sample_group_path, group_reverse){
   

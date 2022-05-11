@@ -119,9 +119,9 @@ if __name__ == "__main__":
     blank_row = dea_combine.loc[:, dea_combine.columns.str.contains("[0-9]_log2FoldChange")].isnull().sum(axis=1) # serise
     dea_combine['1-blank_ratio'] = blank_row.apply(lambda x : ((1 - (x / len(bestSubgroup))) * 100))
 
-    # median & mean
-    dea_combine["SubGroup-log2FC_median"] = dea_combine.iloc[:, 1:].median(axis=1)
-    dea_combine["SubGroup-log2FC_mean"] = dea_combine.iloc[:, 1:].mean(axis=1)
+    # log2FCmedian & mean
+    dea_combine["SubGroup-log2FC_median"] = dea_combine.loc[:, dea_combine.columns.to_series().str.endswith("_log2FoldChange")].median(axis=1)
+    dea_combine["SubGroup-log2FC_mean"] = dea_combine.loc[:,  dea_combine.columns.to_series().str.endswith("_log2FoldChange")].mean(axis=1)
 
     # NT vs TP DEA
     # log fc, FDR value 수정

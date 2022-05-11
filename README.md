@@ -1,5 +1,9 @@
 # **Multi-Omics-Integration**
 
+## **Workflow**
+
+![workflow](https://user-images.githubusercontent.com/42958809/167774736-f059e43b-2de6-4cae-bc5a-dc9b02e0606a.png)
+
 
 ## **Environment**
 

@@ -16,12 +16,12 @@ suppressPackageStartupMessages({
 
 survFit <- function(sample_group_path, raw_path){
   suppressMessages({
-    sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+    sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE, progress = FALSE)
     
     # surv data
     pheno <- read_delim(paste0(raw_path, "/Survival_SupplementalTable_S1_20171025_xena_sp"), 
                         col_select = c('sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'),
-                        delim = "\t", show_col_types = FALSE)
+                        delim = "\t", show_col_types = FALSE, progress = FALSE)
     sample_group_surv <- left_join(x = sample_group, y = pheno, by = "sample")
     
     fit <- survfit(Surv(time = OS.time, event = OS) ~ group, data = sample_group_surv)
@@ -402,7 +402,7 @@ run_deseq_normal <- function(pr_name, rdata_path, deg_path, batch_removal){
 run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, file_name, deg_path, batch_removal){
   register(MulticoreParam(20))
   suppressMessages({
-    sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE)
+    sample_group <- read_delim(file = sample_group_path, delim = "\t", show_col_types = FALSE, progress = FALSE)
       
     # group convert
     if(group_reverse){sample_group <- sample_group %>% mutate(group = ifelse(group == 0, 1, 0))}  

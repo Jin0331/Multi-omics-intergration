@@ -76,7 +76,7 @@ dgidb_interaction <- function(gene_name){
                      fda_approved_drug="true")
     
     # output
-    dgidb_result <- POST(request_url, body = payload, encode = "form") %>%  
+    dgidb_result <- POST(request_url, body = payload, encode = "form", config = httr::config(connecttimeout = 100)) %>%  
       httr::content(encoding = "UTF-8") 
   
     result_list[[index]] <- lapply(X = dgidb_result$matchedTerms, FUN = function(dgidb_element){

@@ -16,6 +16,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Subgroup Analysis!')
     parser.add_argument('-b', '--base', required=True, type=str, help='Root Path')
     parser.add_argument('-c', '--cancer', required=True, type=str, help='Types of cancer')
+    parser.add_argument('-a', '--cancer2', default=None, type=str, help='Types of cancer2')
     parser.add_argument('-d', '--dea', default="deseq2", type=str, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
     parser.add_argument('-l', '--logfc', default=1, type=float, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
     parser.add_argument('-f', '--fdr', default=0.05, type=float, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
@@ -24,6 +25,7 @@ if __name__ == "__main__":
     # file path
     os.chdir(static_args.base)
     CANCER_TYPE = static_args.cancer
+    CANCER_TYPE2 = static_args.cancer2
     METHOD = static_args.dea
     LOGFC = static_args.logfc
     FDR = static_args.fdr
@@ -133,10 +135,13 @@ if __name__ == "__main__":
 
     result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, left_on='gene', right_on='gene', how = 'left')   
 
-    # Textmining
-    sql = 'SELECT * FROM Textmining.' + CANCER_TYPE
-    tm_df = query_tm_db(sql)
-    result_combine_tm = pd.merge(left=result_combine, right=tm_df, left_on="gene", right_on="gene", how='left')
+    # Textmining  
+    if CANCER_TYPE2 is not None:
+      query_types = [CANCER_TYPE] + [CANCER_TYPE2]
+    else:
+      query_types = [CANCER_TYPE]
+
+    result_combine_tm = reduce(lambda q1, q2 : pd.merge(left = q1, right = q2, on="gene", how='outer'), map(db_query, query_types))
 
     # DGIdb
     gene_list = result_combine_tm.loc[:, 'gene'].to_list()

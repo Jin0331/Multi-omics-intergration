@@ -17,7 +17,7 @@ if gpus:
 if len(gpus) == 0:
     R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics-cpu/lib/R'
 else :
-    R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics-gpu/lib/R'        
+    R_HOME = os.path.expanduser('~') + '/anaconda3/envs/multiomics-gpu/lib/R'
         
 import re
 import pickle
@@ -27,7 +27,6 @@ from pathlib import Path
 import random
 
 import pandas as pd
-import pymysql
 import numpy as np
 import seaborn as sns
 from functools import reduce
@@ -83,6 +82,13 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.conversion import localconverter
+
+# db connection
+import pymysql
+from sqlalchemy import create_engine
+
+aws_mariadb_url = 'mysql+pymysql://root:sempre813!@192.168.0.91:3306/Textmining'
+engine_mariadb = create_engine(aws_mariadb_url)  
 
 # function
 
@@ -908,21 +914,10 @@ def col_rename(df, num, bs):
     
     return df
 
-def query_tm_db(query):
-    # Connect to MariaDB (mariadb.connect 대신 pymysql.connect 로 해도 된다)
-    dbconn = pymysql.connect(
-        user="root",
-        password="sempre813!",
-        host="192.168.0.91",
-        port=3306,
-        database="Textmining"
-    )
- 
-    # mariaDB Query to Pandas DataFrame
-    query_result= pd.read_sql(query,dbconn)
-    dbconn.close()
-    
-    return query_result
+def db_query(x):   
+    q1 = pd.read_sql_table(table_name=x, con=engine_mariadb)
+    q1.columns = ['gene', x + '_type', x + '_SUPPORT', x + '_CONFIDENCE', x + '_LIFT', x + '_COUNT']
+    return q1
 
 def dgidb_extract(gene_list):
     r = ro.r

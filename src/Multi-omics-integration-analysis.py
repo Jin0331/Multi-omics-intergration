@@ -116,10 +116,12 @@ if __name__ == "__main__":
         dea_combine = list(map(lambda d : d[["row", "log2FoldChange", "padj"]], dea_result))
         dea_combine = [col_rename(dea_combine[index], index, bestSubgroup) for index in range(len(dea_combine))]
         dea_combine = reduce(lambda left, right : pd.merge(left, right, left_on='gene', right_on='gene', how = 'outer'), dea_combine)
+    print("Multiple DEA Combine Finished!")
 
     # blank row calculation
     blank_row = dea_combine.loc[:, dea_combine.columns.str.contains("[0-9]_log2FoldChange")].isnull().sum(axis=1) # serise
     dea_combine['1-blank_ratio'] = blank_row.apply(lambda x : ((1 - (x / len(bestSubgroup))) * 100))
+    print("Blank ratio calculation Combine Finished!")
 
     # log2FCmedian & mean
     dea_combine["SubGroup-log2FC_median"] = dea_combine.loc[:, dea_combine.columns.to_series().str.endswith("_log2FoldChange")].median(axis=1)
@@ -134,6 +136,7 @@ if __name__ == "__main__":
     nt_tp_deseq2_col.columns = ['gene', 'NT-TP_log2FoldChange', 'padj']
 
     result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, left_on='gene', right_on='gene', how = 'left')   
+    print("NT-TP DEA Combine Finished!")
 
     # Textmining  
     if CANCER_TYPE2 is not None:
@@ -141,12 +144,15 @@ if __name__ == "__main__":
     else:
       query_types = [CANCER_TYPE]
 
-    result_combine_tm = reduce(lambda q1, q2 : pd.merge(left = q1, right = q2, on="gene", how='outer'), map(db_query, query_types))
+    tm_df = reduce(lambda q1, q2 : pd.merge(left = q1, right = q2, on="gene", how='outer'), map(db_query, query_types))
+    result_combine_tm = pd.merge(left=result_combine, right=tm_df, left_on="gene", right_on="gene", how='left')
+    print("Textmining Combine Finished!")
 
     # DGIdb
     gene_list = result_combine_tm.loc[:, 'gene'].to_list()
-    result_dgidb = dgidb_extract(gene_list)
+    result_dgidb = dgidb_extract(gene_list, True)
     result_combine_dgidb = pd.merge(left=result_combine_tm, right=result_dgidb, left_on='gene', right_on='gene', how='left')
+    print("DGIdb Combine Finished!")
 
     # Result write
     Path(os.getcwd() + "/RESULT").mkdir(parents=True, exist_ok=True)

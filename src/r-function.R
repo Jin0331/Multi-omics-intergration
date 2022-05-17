@@ -12,6 +12,7 @@ suppressPackageStartupMessages({
   library(EnhancedVolcano)
   library(sva)
   library(httr)
+  library(parallel)
 })
 
 survFit <- function(sample_group_path, raw_path){
@@ -62,6 +63,53 @@ nb_cluster_test <- function(df){
 }
 
 # DGIdb
+dgidb_interaction_parallel <- function(gene_name){
+  base_url <- "https://dgidb.org"
+  request_url <- paste0(base_url, "/api/v2/interactions.json?")
+  result_list <- list()
+  
+  # chunk id
+  id_chunk <- split(gene_name, ceiling(seq_along(gene_name)/200))
+  
+  mclapply(X = 1:length(id_chunk), FUN = function(index){
+    # print(index)
+    payload <-  list(genes = paste0(id_chunk[[index]], collapse = ","),
+                     fda_approved_drug="true")
+    
+    # output
+    dgidb_result <- POST(request_url, body = payload, encode = "form", config = httr::config(connecttimeout = 60)) %>%  
+      httr::content(encoding = "UTF-8") 
+    
+    lapply(X = dgidb_result$matchedTerms, FUN = function(dgidb_element){
+      gene_category <- dgidb_element$geneCategories %>% 
+        sapply(X = ., FUN = function(value) {value$name}) %>% 
+        paste0(collapse = ",")
+      
+      interaction <- dgidb_element$interactions %>% 
+        sapply(X = ., FUN = function(value){
+          drug_name <- value$drugName
+          score <- value$score
+          types <- value$interactionTypes %>% unlist() %>% paste0(collapse = "&")
+          
+          paste0(c(drug_name, score, types), collapse = ";") %>% 
+            as_tibble() %>% 
+            return()
+          
+          # return(drug_name)  
+        }) %>% unlist() %>% 
+        paste0(., collapse = "&")
+      
+      tibble(
+        gene = dgidb_element$geneName,
+        DGI_GENE_CATEGORY = gene_category, 
+        `DGI(DRUG_NAME;SCORE;TYPE)` = interaction,
+        DGI_COUNT = length(dgidb_element$interactions)
+      )  %>% return()
+      
+    }) %>% return()
+  }, mc.cores = 3) %>% bind_rows() %>% return()
+}
+
 dgidb_interaction <- function(gene_name){
   base_url <- "https://dgidb.org"
   request_url <- paste0(base_url, "/api/v2/interactions.json?")
@@ -70,7 +118,9 @@ dgidb_interaction <- function(gene_name){
   # chunk id
   id_chunk <- split(gene_name, ceiling(seq_along(gene_name)/200))
   
+  print(paste0("total chunk length : ", length(id_chunk)))
   for(index in 1:length(id_chunk)){
+    print(index)
     # print(index)
     payload <-  list(genes = paste0(id_chunk[[index]], collapse = ","),
                      fda_approved_drug="true")

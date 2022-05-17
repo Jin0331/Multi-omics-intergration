@@ -916,13 +916,17 @@ def col_rename(df, num, bs):
 
 def db_query(x):   
     q1 = pd.read_sql_table(table_name=x, con=engine_mariadb)
-    q1.columns = ['gene', x + '_type', x + '_SUPPORT', x + '_CONFIDENCE', x + '_LIFT', x + '_COUNT']
+    q1.columns = ['gene', x + '_TYPE', x + '_SUPPORT', x + '_CONFIDENCE', x + '_LIFT', x + '_COUNT']
     return q1
 
-def dgidb_extract(gene_list):
+def dgidb_extract(gene_list, parallel=None):
     r = ro.r
     r['source']('src/r-function.R')
-    dgidb_r = ro.globalenv['dgidb_interaction']
+    if parallel:
+      dgidb_r = ro.globalenv['dgidb_interaction_parallel']
+    else:
+      dgidb_r = ro.globalenv['dgidb_interaction']
+
     
     dgidb_result = dgidb_r(gene_list)
     

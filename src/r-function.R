@@ -13,6 +13,8 @@ suppressPackageStartupMessages({
   library(sva)
   library(httr)
   library(parallel)
+  library(AnnotationDbi)
+  library(org.Hs.eg.db)
 })
 
 survFit <- function(sample_group_path, raw_path){
@@ -161,6 +163,20 @@ dgidb_interaction <- function(gene_name){
   result_list %>% bind_rows() %>% return()
 }
 
+symbol2ensembl <- function(DF){
+  protein_atlas_url <- "https://www.proteinatlas.org/"
+  gene_list <- DF %>% pull(gene)
+  gene_list_mapping <- mapIds(org.Hs.eg.db,
+                              keys=gene_list, 
+                              column="ENSEMBL",
+                              keytype="SYMBOL",
+                              multiVals="first") %>% 
+    tibble(gene = names(.), ENSEMBL = .) %>% 
+    mutate(PROTEIN_ATLAS = ifelse(!is.na(ENSEMBL), paste0(protein_atlas_url, ENSEMBL, "-", gene), "")) %>% 
+    dplyr::select(gene, PROTEIN_ATLAS)
+  
+  return(gene_list_mapping)
+}
 
 # function
 # run_edgeR <- function(pr_name, sample_group_path, group_reverse){

@@ -1,5 +1,6 @@
 # modules
 import os
+from turtle import delay
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import tensorflow as tf
@@ -25,6 +26,7 @@ import datetime
 from requests import get
 from pathlib import Path
 import random
+from retry import retry
 
 import pandas as pd
 import numpy as np
@@ -830,6 +832,7 @@ def feature_selection_svm(data_type, o):
         
     return feature_result
 
+@retry(delay=3)
 def deg_extract(log_fc, fdr, method, cancer_type, sample_group, deg_path, file_name, rdata_path, batch_removal, raw_path):
     r = ro.r
     r['source']('src/r-function.R')
@@ -935,6 +938,26 @@ def dgidb_extract(gene_list, parallel=None):
         
     return dgidb_result
 
+def symboltoEnsembl(df):
+    # pandas DF to R DF
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        sybmol_df = ro.conversion.py2rpy(df)
+
+    r = ro.r
+    r['source']('src/r-function.R')
+    symbol_mapping = ro.globalenv['symbol2ensembl']
+    symbol_df = symbol_mapping(sybmol_df)
+
+    # R DF to pandas DF
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        symbol_df = ro.conversion.rpy2py(symbol_df)
+        
+    return symbol_df
+
+@retry(delay=1)
+def textmining_extract(query_types):
+  tm_result = reduce(lambda q1, q2 : pd.merge(left = q1, right = q2, on="gene", how='outer'), map(db_query, query_types))
+  return tm_result
 
 
 if __name__ == "__main__": 

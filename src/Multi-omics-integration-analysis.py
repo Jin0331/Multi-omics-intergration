@@ -1,7 +1,7 @@
 """
 example : python src/Multi-omics-integration-analysis.py \
          -b /home/wmbio/WORK/gitworking/Multi-omics-intergration/ \
-         -c BRCA
+         -c PAAD
 
 @author: Jinwoo Lee
 """
@@ -111,11 +111,11 @@ if __name__ == "__main__":
     if METHOD == 'all':
         dea_combine = list(map(deseq2_edger_combine, dea_result))
         dea_combine = [col_rename(dea_combine[index], index, bestSubgroup) for index in range(len(dea_combine))]
-        dea_combine = reduce(lambda left, right : pd.merge(left, right, left_on='gene', right_on='gene', how = 'outer'), dea_combine)
+        dea_combine = reduce(lambda left, right : pd.merge(left, right, on='gene', how = 'outer'), dea_combine)
     elif METHOD == 'deseq2' :
         dea_combine = list(map(lambda d : d[["row", "log2FoldChange", "padj"]], dea_result))
         dea_combine = [col_rename(dea_combine[index], index, bestSubgroup) for index in range(len(dea_combine))]
-        dea_combine = reduce(lambda left, right : pd.merge(left, right, left_on='gene', right_on='gene', how = 'outer'), dea_combine)
+        dea_combine = reduce(lambda left, right : pd.merge(left, right, on='gene', how = 'outer'), dea_combine)
     print("Multiple DEA Combine Finished!")
 
     # blank row calculation
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     nt_tp_deseq2_col = nt_tp_deseq2[['row', 'log2FoldChange', 'pvalue']]
     nt_tp_deseq2_col.columns = ['gene', 'NT-TP_log2FoldChange', 'padj']
 
-    result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, left_on='gene', right_on='gene', how = 'left')   
+    result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, on='gene', how = 'left')   
     print("NT-TP DEA Combine Finished!")
 
     # Textmining  
@@ -144,15 +144,22 @@ if __name__ == "__main__":
     else:
       query_types = [CANCER_TYPE]
 
-    tm_df = reduce(lambda q1, q2 : pd.merge(left = q1, right = q2, on="gene", how='outer'), map(db_query, query_types))
-    result_combine_tm = pd.merge(left=result_combine, right=tm_df, left_on="gene", right_on="gene", how='left')
+    # tm_df = reduce(lambda q1, q2 : pd.merge(left = q1, right = q2, on="gene", how='outer'), map(db_query, query_types))
+    tm_df = textmining_extract(query_types=query_types)
+    result_combine_tm = pd.merge(left=result_combine, right=tm_df, on="gene", how='left')
     print("Textmining Combine Finished!")
 
     # DGIdb
     gene_list = result_combine_tm.loc[:, 'gene'].to_list()
     result_dgidb = dgidb_extract(gene_list, True)
-    result_combine_dgidb = pd.merge(left=result_combine_tm, right=result_dgidb, left_on='gene', right_on='gene', how='left')
+    result_combine_dgidb = pd.merge(left=result_combine_tm, right=result_dgidb, on='gene', how='left')
     print("DGIdb Combine Finished!")
+
+    # Protein Atlas
+    gene_DF = pd.DataFrame(result_combine_dgidb.loc[:, 'gene'])
+    result_pa = symboltoEnsembl(gene_DF)
+    result_combine_proteinatlas = pd.merge(left=result_combine_dgidb, right=result_pa, on='gene', how = 'left')
+    print("Protein Atlas Combine finished!")
 
     # Result write
     Path(os.getcwd() + "/RESULT").mkdir(parents=True, exist_ok=True)
@@ -160,4 +167,4 @@ if __name__ == "__main__":
     time_stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # sort
-    result_combine_dgidb.sort_values(by = ['gene'], axis = 0).to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-' + time_stamp +'.csv', index = False)
+    result_combine_proteinatlas.sort_values(by = ['gene'], axis = 0).to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-' + time_stamp +'.csv', index = False)

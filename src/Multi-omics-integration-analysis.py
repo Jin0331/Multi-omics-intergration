@@ -18,8 +18,9 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--cancer', required=True, type=str, help='Types of cancer')
     parser.add_argument('-a', '--cancer2', default=None, type=str, help='Types of cancer2')
     parser.add_argument('-d', '--dea', default="deseq2", type=str, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
-    parser.add_argument('-l', '--logfc', default=1, type=float, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
-    parser.add_argument('-f', '--fdr', default=0.05, type=float, help='DESeq2(deseq2) or EdgeR(edger) or ALL(all)')
+    parser.add_argument('-l', '--logfc', default=1, type=float, help='log2FC Threshold')
+    parser.add_argument('-f', '--fdr', default=0.05, type=float, help='False dicovery rate Threshold')
+    parser.add_argument('-r', '--seed', default=331, type=int, help='Random Seed')
     static_args = parser.parse_args()
 
     # file path
@@ -29,6 +30,7 @@ if __name__ == "__main__":
     METHOD = static_args.dea
     LOGFC = static_args.logfc
     FDR = static_args.fdr
+    RANDOM_SEED = static_args.seed
 
     GROUP_PHTH = os.getcwd() + '/group/'
     PNG_PATH = os.getcwd() + '/png/'
@@ -72,7 +74,7 @@ if __name__ == "__main__":
 
     # random 추출
     if len(bestSubgroup) >= 100:
-      random.seed(331)
+      random.seed(RANDOM_SEED)
       bestSubgroup = random.sample(bestSubgroup, k=100)
     print("SubGroup count : ", len(bestSubgroup))
 
@@ -167,4 +169,4 @@ if __name__ == "__main__":
     time_stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # sort
-    result_combine_proteinatlas.sort_values(by = ['gene'], axis = 0).to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-' + time_stamp +'.csv', index = False)
+    result_combine_proteinatlas.sort_values(by = ['gene'], axis = 0).to_csv(os.getcwd() + "/RESULT/" + CANCER_TYPE + "/" + CANCER_TYPE + '-RandomSeed-'+ str(RANDOM_SEED) + '-' + time_stamp + '.csv', index = False)

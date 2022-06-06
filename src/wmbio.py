@@ -529,17 +529,17 @@ def nb_cluster(df):
         
     return omic_encoded_fc_r
 
-# invoke r
-def survfit(df, file_name):
-    # pandas DF to R DF
-    with localconverter(ro.default_converter + pandas2ri.converter):
-        r_from_pd_df = ro.conversion.py2rpy(df)
+# # invoke r
+# def survfit(df, file_name):
+#     # pandas DF to R DF
+#     with localconverter(ro.default_converter + pandas2ri.converter):
+#         r_from_pd_df = ro.conversion.py2rpy(df)
 
-    # R UDF invoke
-    r = ro.r
-    r['source']('src/r-function.R')
-    km_survival_r = ro.globalenv['km_survival']
-    km_survival_r(r_from_pd_df, file_name, PNG_PATH)
+#     # R UDF invoke
+#     r = ro.r
+#     r['source']('src/r-function.R')
+#     km_survival_r = ro.globalenv['km_survival']
+#     km_survival_r(r_from_pd_df, file_name, PNG_PATH)
 
 def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name, raw_path,
                   model_names = ['encoder_vanilla', 'encoder_sparse', 'encoder_denoisy']):
@@ -669,7 +669,7 @@ def load_preprocess_tcga_dataset(pkl_path, raw_path, group, norm, cancer_type):
 #         omics_impute = imputer.fit_transform(omics)                
         rna_impute = imputer.fit_transform(rna)
         mirna_impute = imputer.fit_transform(mirna)
-        mt_join_gene_filter_impute = imputer.fit_transform(mt_join_gene_filtere)
+        mt_join_gene_filter_impute = imputer.fit_transform(mt_join_gene_filter)
 
         # Pandas
 #         omics = pd.DataFrame(omics_impute, columns=omics.columns)

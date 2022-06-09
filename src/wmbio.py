@@ -468,49 +468,64 @@ def group_convert(sample_group, raw_path):
     else:
         return True
 
+def log_rank_test_py(df, png_path, cancer_type, file_name):
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        df = ro.conversion.py2rpy(df)
 
-def log_rank_test(df, png_path, cancer_type, file_name):
-    group_size = len(set(df.loc[:, ["group"]].iloc[:,0].to_list()))
-    labels = ["G" + str(index) for index in range(group_size)]
+    r = ro.r
+    r['source']('src/r-function.R')
+    survDiff_r = ro.globalenv['log_rank_test_group']
+    # survDiff_pvalue = survDiff_r(df, png_path, cancer_type, file_name)
+    survDiff_pvalue = survDiff_r(df)
     
-    groups = df.dropna().iloc[:, 0].to_list()
-    events = df.dropna().iloc[:, 1].to_list()
-    times = df.dropna().iloc[:, 2].to_list()
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        survDiff_pvalue = ro.conversion.rpy2py(survDiff_pvalue)
 
-    E = np.array(events, dtype=np.int32)
-    T = np.array(times, dtype=np.float32)
+    return survDiff_pvalue[0]
+
+
+# def log_rank_test(df, png_path, cancer_type, file_name):
+#     group_size = len(set(df.loc[:, ["group"]].iloc[:,0].to_list()))
+#     labels = ["G" + str(index) for index in range(group_size)]
     
-    #### 3. matplotlib parameter
-    rcParams.update({'font.size': 12})
-    fig, ax = plt.subplots(figsize=(5,5))
-    styles = ['-', '--']
-    colors = ['r', 'g']
-    lw = 3
+#     groups = df.dropna().iloc[:, 0].to_list()
+#     events = df.dropna().iloc[:, 1].to_list()
+#     times = df.dropna().iloc[:, 2].to_list()
 
-    #### 4. Kaplan-Meier 
-    kmf = KaplanMeierFitter()
-    for i, label in enumerate(labels):
-        ix = np.array(groups) == i
-        kmf.fit(T[ix], event_observed=E[ix], label=labels[i])
-        kmf.plot(ax=ax, ci_show=False, linewidth=lw, style=styles[i], c=colors[i])
+#     E = np.array(events, dtype=np.int32)
+#     T = np.array(times, dtype=np.float32)
+    
+#     #### 3. matplotlib parameter
+#     rcParams.update({'font.size': 12})
+#     fig, ax = plt.subplots(figsize=(5,5))
+#     styles = ['-', '--']
+#     colors = ['r', 'g']
+#     lw = 3
 
-    #### 5. Logrank test
-    ix = np.array(groups) == 1
-    result = logrank_test(T[ix], T[~ix], E[ix], E[~ix], alpha=.99)
-    pvalue = result.p_value
-    ax.text(50,0.3,'P-value=%.6f'% pvalue) # 위치(3.4,0.75) 수동으로 지정필요
+#     #### 4. Kaplan-Meier 
+#     kmf = KaplanMeierFitter()
+#     for i, label in enumerate(labels):
+#         ix = np.array(groups) == i
+#         kmf.fit(T[ix], event_observed=E[ix], label=labels[i])
+#         kmf.plot(ax=ax, ci_show=False, linewidth=lw, style=styles[i], c=colors[i])
 
-    #### 6. 
-    ax.set_xlabel('Time', fontsize=14)
-    ax.set_ylabel('Survival', fontsize=14)
-    ax.legend(loc='upper right')
+#     #### 5. Logrank test
+#     ix = np.array(groups) == 1
+#     result = logrank_test(T[ix], T[~ix], E[ix], E[~ix], alpha=.99)
+#     pvalue = result.p_value
+#     ax.text(50,0.3,'P-value=%.6f'% pvalue) # 위치(3.4,0.75) 수동으로 지정필요
 
-    plt.tight_layout()
-    plt.ioff()
-    Path(png_path + "/" + cancer_type).mkdir(parents=True, exist_ok=True)
-    plt.savefig(png_path + "/" + cancer_type + "/" + file_name + "_logrank.png", format='png', dpi=500)
+#     #### 6. 
+#     ax.set_xlabel('Time', fontsize=14)
+#     ax.set_ylabel('Survival', fontsize=14)
+#     ax.legend(loc='upper right')
 
-    return pvalue
+#     plt.tight_layout()
+#     plt.ioff()
+#     Path(png_path + "/" + cancer_type).mkdir(parents=True, exist_ok=True)
+#     plt.savefig(png_path + "/" + cancer_type + "/" + file_name + "_logrank.png", format='png', dpi=500)
+
+#     return pvalue
 
 # invoke r
 def nb_cluster(df):

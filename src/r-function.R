@@ -56,11 +56,32 @@ log_rank_test <- function(df){
   })
 }
 
+# log rank test
+log_rank_test_group <- function(group_sample){
+  group_sample <- as_tibble(group_sample)
+  survdiff_result <- survdiff(Surv(group_sample$OS.time, group_sample$OS) ~ group_sample$group)
+  surv_result <- survfit(Surv(group_sample$OS.time, group_sample$OS) ~ group_sample$group)
+  # print(group_sample)
+  # t <- ggsurvplot(surv_result, 
+  #                 data = group_sample, 
+  #                 conf.int = TRUE, 
+  #                 risk.table.col = 'strata',
+  #                 ggtheme = theme_bw(),
+  #                 palette = c("#E7B800", "#2E9FDF"),
+  #                 pval = TRUE)
+  # ggsave(t, file = paste0(png_path, "/", cancer_type, "/", file_name, "_logrank.png"))
+  log_rank_test_p <- pchisq(survdiff_result$chisq, df = 1, lower.tail = F)
+  
+  return(log_rank_test_p)
+}
+
+
 # random_forest test
 nb_cluster_test <- function(df){ 
   suppressMessages({
     nc <- NbClust(df,min.nc=2,max.nc=9,method="kmeans", index = c("silhouette","cindex"))
-    nc$All.index %>% as_tibble() %>% select("Silhouette") %>% return()
+    nc$All.index %>% as_tibble() %>% 
+    dplyr::select("Silhouette") %>% return()
   })
 }
 
@@ -165,7 +186,8 @@ dgidb_interaction <- function(gene_name){
 
 symbol2ensembl <- function(DF){
   protein_atlas_url <- "https://www.proteinatlas.org/"
-  gene_list <- DF %>% pull(gene)
+  gene_list <- DF %>% 
+    dplyr::pull(gene)
   gene_list_mapping <- mapIds(org.Hs.eg.db,
                               keys=gene_list, 
                               column="ENSEMBL",
@@ -481,7 +503,7 @@ run_deseq <- function(pr_name, sample_group_path, rdata_path, group_reverse, fil
                           experimental.strategy = "RNA-Seq",
                           platform = "Illumina HiSeq",
                           file.type = "results",
-                          barcode = sample_group %>% pull(1), 
+                          barcode = sample_group %>% dplyr::pull(1), 
                           legacy = TRUE)
 
         GDCdownload(query)
@@ -693,13 +715,13 @@ stand_alone_deg <- function(cancer_type, subgroup_path, deg_path){
       edger %>% as_tibble() %>% 
         write_delim(file = paste0(deg_path, cancer_type, "_EDGER_", file_name_group, ".txt"), delim = "\t")
       edger %>% as_tibble() %>% 
-        select_at(1) %>% 
+        dplyr::select_at(1) %>% 
         write_delim(file = paste0(deg_path, cancer_type, "_EDGER_DEG_", file_name_group, ".txt"), delim = "\t")
       
       deseq %>% as_tibble() %>% 
         write_delim(file = paste0(deg_path, cancer_type, "_DESEQ2_", file_name_group, ".txt"), delim = "\t")
       deseq %>% as_tibble() %>% 
-        select_at(1) %>% 
+        dplyr::select_at(1) %>% 
         write_delim(file = paste0(deg_path, cancer_type, "_DESEQ2_DEG_", file_name_group, ".txt"), delim = "\t")
     } 
   }

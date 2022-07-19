@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     for _ in range(CYCLE):
       try:
-        log_pvalue_l, silhouette_score_l, rna_anovar_f1, rna_rf_f1 = [], [], [], []
+        log_pvalue_l, tmb_pvalue_l, silhouette_score_l, rna_anovar_f1, rna_rf_f1 = [], [], [], [], []
         mirna_anovar_f1, mirna_rf_f1, mt_anovar_f1, mt_rf_f1 = [], [], [], []
         file_name = []
         
@@ -92,8 +92,13 @@ if __name__ == "__main__":
         log_pvalue = log_rank_test_py(df=omics_preprocess["omics"].iloc[:, :3], png_path=PNG_PATH, cancer_type = CANCER_TYPE,file_name=FILE_NAME)
         # log_pvalue = log_rank_test(df=omics_preprocess["omics"], png_path=PNG_PATH, cancer_type = CANCER_TYPE,file_name=FILE_NAME)  
 
+        tmb_pvalue = tmb_t_test(group, RAW_file_path)
+
         ### Score
         log_pvalue_l.append(log_pvalue)
+
+        tmb_pvalue_l.append(tmb_pvalue)
+
         silhouette_score_l.append(silhouette_score)
 
         rna_anovar_f1.append(feature_result["rna"][0][2])
@@ -112,6 +117,7 @@ if __name__ == "__main__":
         score_df = pd.DataFrame({
         'FILENAME' : file_name,
         'Log Rank Test' : log_pvalue_l,
+        'TMB T-Test' : tmb_pvalue_l, 
         'Silhouette' : silhouette_score_l,
         'RNA_ANOVA_F1' : rna_anovar_f1,
         'RNA_RF_F1' : rna_rf_f1,

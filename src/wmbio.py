@@ -974,6 +974,18 @@ def textmining_extract(query_types):
   tm_result = reduce(lambda q1, q2 : pd.merge(left = q1, right = q2, on="gene", how='outer'), map(db_query, query_types))
   return tm_result
 
+def tmb_t_test(group, raw_path):
+  r = ro.r
+  r['source']('src/r-function.R')
+  tmb_calc = ro.globalenv["tmb_calculation"]
+
+  # pd to r df
+  with localconverter(ro.default_converter + pandas2ri.converter):
+    group = ro.conversion.py2rpy(group.reset_index(level=0))
+
+  t_test_result = tmb_calc(group, raw_path)
+
+  return t_test_result[0]
 
 if __name__ == "__main__": 
     print("not main")

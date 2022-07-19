@@ -33,6 +33,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--base', required=True, type=str, help='Root Path')
     parser.add_argument('-c', '--cancer', required=True, type=str, help='Types of cancer')
     parser.add_argument('-e', '--cycle', default=100, type=int, help='configuration of the name of output without a filename extension')
+    parser.add_argument('-n', '--threads', default=16, type=int, help='parallelism threads')
 
     static_args = parser.parse_args()
 
@@ -40,6 +41,11 @@ if __name__ == "__main__":
     os.chdir(static_args.base)
     CANCER_TYPE = static_args.cancer
     CYCLE = int(static_args.cycle)
+    THREAD = int(static_args.threads)
+
+    # tensorflow thread cofigure
+    # tf.config.threading.set_intra_op_parallelism_threads(THREAD)
+    # tf.config.threading.set_inter_op_parallelism_threads(THREAD)  
 
     RAW_file_path = os.getcwd() + "/RAW_DATA/"
     PKL_file_path = os.getcwd() + "/pkl/"

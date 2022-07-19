@@ -28,9 +28,10 @@ survFit <- function(sample_group_path, raw_path){
     sample_group_surv <- left_join(x = sample_group, y = pheno, by = "sample")
     
     fit <- survfit(Surv(time = OS.time, event = OS) ~ group, data = sample_group_surv)
+  })
     summary(fit)$table %>% as.data.frame() %>%
       return()
-  })
+  
 }  
 
 # log-rank test
@@ -48,30 +49,33 @@ log_rank_test <- function(df){
       cox_result <- summary(cox)
       tibble(Features = col_name, log_p_value = cox_result$logtest["pvalue"]) %>% return()
     }) %>% bind_rows()
-    
+  })
     # p-value 0.05 cuttoff
     df_log_rank %>% 
       filter(log_p_value < 0.05) %>% 
       return()
-  })
+  
 }
 
 # log rank test
 log_rank_test_group <- function(group_sample){
-  group_sample <- as_tibble(group_sample)
-  survdiff_result <- survdiff(Surv(group_sample$OS.time, group_sample$OS) ~ group_sample$group)
-  surv_result <- survfit(Surv(group_sample$OS.time, group_sample$OS) ~ group_sample$group)
-  # print(group_sample)
-  # t <- ggsurvplot(surv_result, 
-  #                 data = group_sample, 
-  #                 conf.int = TRUE, 
-  #                 risk.table.col = 'strata',
-  #                 ggtheme = theme_bw(),
-  #                 palette = c("#E7B800", "#2E9FDF"),
-  #                 pval = TRUE)
-  # ggsave(t, file = paste0(png_path, "/", cancer_type, "/", file_name, "_logrank.png"))
-  log_rank_test_p <- pchisq(survdiff_result$chisq, df = 1, lower.tail = F)
-  
+
+  suppressMessages({
+    group_sample <- as_tibble(group_sample)
+    survdiff_result <- survdiff(Surv(group_sample$OS.time, group_sample$OS) ~ group_sample$group)
+    surv_result <- survfit(Surv(group_sample$OS.time, group_sample$OS) ~ group_sample$group)
+    # print(group_sample)
+    # t <- ggsurvplot(surv_result, 
+    #                 data = group_sample, 
+    #                 conf.int = TRUE, 
+    #                 risk.table.col = 'strata',
+    #                 ggtheme = theme_bw(),
+    #                 palette = c("#E7B800", "#2E9FDF"),
+    #                 pval = TRUE)
+    # ggsave(t, file = paste0(png_path, "/", cancer_type, "/", file_name, "_logrank.png"))
+    log_rank_test_p <- pchisq(survdiff_result$chisq, df = 1, lower.tail = F)
+  })
+
   return(log_rank_test_p)
 }
 
@@ -185,19 +189,40 @@ dgidb_interaction <- function(gene_name){
 }
 
 symbol2ensembl <- function(DF){
-  protein_atlas_url <- "https://www.proteinatlas.org/"
-  gene_list <- DF %>% 
-    dplyr::pull(gene)
-  gene_list_mapping <- mapIds(org.Hs.eg.db,
-                              keys=gene_list, 
-                              column="ENSEMBL",
-                              keytype="SYMBOL",
-                              multiVals="first") %>% 
-    tibble(gene = names(.), ENSEMBL = .) %>% 
-    mutate(PROTEIN_ATLAS = ifelse(!is.na(ENSEMBL), paste0(protein_atlas_url, ENSEMBL, "-", gene), "")) %>% 
-    dplyr::select(gene, PROTEIN_ATLAS)
-  
+  suppressMessages({
+    protein_atlas_url <- "https://www.proteinatlas.org/"
+    gene_list <- DF %>% 
+      dplyr::pull(gene)
+    gene_list_mapping <- mapIds(org.Hs.eg.db,
+                                keys=gene_list, 
+                                column="ENSEMBL",
+                                keytype="SYMBOL",
+                                multiVals="first") %>% 
+      tibble(gene = names(.), ENSEMBL = .) %>% 
+      mutate(PROTEIN_ATLAS = ifelse(!is.na(ENSEMBL), paste0(protein_atlas_url, ENSEMBL, "-", gene), "")) %>% 
+      dplyr::select(gene, PROTEIN_ATLAS)
+  })
   return(gene_list_mapping)
+}
+
+# tmb
+tmb_calculation <- function(group, raw_path){
+  suppressMessages({
+    # maf_tcga <- maftools::read.maf(paste0(raw_path, "mc3.v0.2.8.PUBLIC.maf.gz"), verbose = 0)
+    load(paste0(raw_path, "mc3.v0.2.8.PUBLIC.RData"))
+    pancan_tmb <- maftools::tmb(maf = maf_tcga, captureSize = 38) %>%  
+      separate(Tumor_Sample_Barcode, into = LETTERS[1:7], sep = "-") %>% 
+      dplyr::filter(D == "01A") %>% 
+      dplyr::select(-E, -F, -G) %>% 
+      unite(col = sample, A,B,C,D, sep = "-") %>% 
+      mutate(sample = substring(sample,1, nchar(sample)-1),
+            total_perMB_log = log((total_perMB + 1), 2)) %>% 
+      as_tibble()
+      
+    tmp <- left_join(x = group, y = pancan_tmb, by = "sample")
+    t_test_result <- t.test(total_perMB_log ~ group, tmp) %>% .$p.value
+  })
+  return(t_test_result)
 }
 
 # function

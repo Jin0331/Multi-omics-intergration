@@ -40,7 +40,7 @@ if __name__ == "__main__":
     RAW_PATH = os.getcwd() + "/RAW_DATA/"
 
     # Load Validation score
-    col=['FILENAME','Log Rank Test','Silhouette','RNA_ANOVA_F1','RNA_RF_F1',
+    col=['FILENAME','Log Rank Test', 'TMB T-Test', 'Silhouette','RNA_ANOVA_F1','RNA_RF_F1',
         'miRNA_ANOVA_F1','miRNA_RF_F1','Methylation_ANOVA_F1','Methylation_RF_F1']
 
     group_score = pd.read_csv(GROUP_VALIDATION_PATH + CANCER_TYPE + '_validation.csv', usecols=col)
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     print("MT_RF Q3 : ", MT_RF)
  
     # Condition for Filtering
-    filter_cond = (group_score['Silhouette'] >= SILHOUETTE) & (group_score['Log Rank Test'] < 0.05) & \
+    filter_cond = (group_score['Silhouette'] >= SILHOUETTE) & (group_score['Log Rank Test'] < 0.05) & (group_score['TMB T-Test'] < 0.05) & \
               ((group_score['RNA_ANOVA_F1'] > RNA_ANOVA) | (group_score['RNA_RF_F1'] > RNA_RF)) & \
               ((group_score['miRNA_ANOVA_F1'] > MIRNA_ANOVAR) | (group_score['miRNA_RF_F1'] > MIRNA_RF)) & \
               ((group_score['Methylation_ANOVA_F1'] > MT_ANOVAR) | (group_score['Methylation_RF_F1'] > MT_RF))

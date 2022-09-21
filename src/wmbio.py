@@ -1159,7 +1159,23 @@ def get_pdb_structure_id(gene_list):
     m_v = m_v[['From', 'Entry', 'Reviewed', 'pdbID']]
     m_v.columns = ['GENE_NAME', 'UniprotKB', 'Reviewed', 'pdbID']
     
-    return m_v
+    # post processing
+    pdbID_collapse = m_v.groupby('GENE_NAME').apply(lambda x : ';'.join(filter(None, x['pdbID'])))
+    pdbID_collapse.name = "pdbID"
+
+    UniprotKB_collapse = m_v.groupby('GENE_NAME').apply(lambda x : ';'.join(filter(None, x['UniprotKB'])))
+    UniprotKB_collapse.name = "UniprotKB"
+
+    pdb_collapse = pd.merge(UniprotKB_collapse, pdbID_collapse, right_index = True,
+                   left_index = True)
+
+    pdb_collapse['pdbID'] = pdb_collapse.apply(lambda x : x['pdbID'].split(';'), axis=1)
+
+    pdb_collapse['pdbCount'] = pdb_collapse.apply(lambda x : len(set(x['pdbID'])) - 1, axis=1)
+
+    pdb_collapse['pdbID'] = pdb_collapse.apply(lambda x : ';'.join(set(x['pdbID'])),axis = 1)
+    
+    return pdb_collapse
 
 if __name__ == "__main__": 
     print("not main")

@@ -157,10 +157,16 @@ if __name__ == "__main__":
     result_combine_dgidb = pd.merge(left=result_combine_tm, right=result_dgidb, on='gene', how='left')
     print("DGIdb Combine Finished!")
 
+    # PDBid
+    gene_list = result_combine_dgidb.loc[:, 'gene'].to_list()
+    pdb_df = get_pdb_structure_id(gene_list)
+    result_combine_pdbid = pd.merge(left=result_combine_dgidb, right=pdb_df, left_on='gene', right_on='GENE_NAME', how='left')
+    print("PDBid Combine Finished!")
+
     # Protein Atlas
-    gene_DF = pd.DataFrame(result_combine_dgidb.loc[:, 'gene'])
+    gene_DF = pd.DataFrame(result_combine_pdbid.loc[:, 'gene'])
     result_pa = symboltoEnsembl(gene_DF)
-    result_combine_proteinatlas = pd.merge(left=result_combine_dgidb, right=result_pa, on='gene', how = 'left')
+    result_combine_proteinatlas = pd.merge(left=result_combine_pdbid, right=result_pa, on='gene', how = 'left')
     print("Protein Atlas Combine finished!")
 
     # Result write

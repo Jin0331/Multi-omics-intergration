@@ -470,8 +470,8 @@ def group_convert(sample_group, raw_path):
     with localconverter(ro.default_converter + pandas2ri.converter):
         survFit_result = ro.conversion.rpy2py(survFit_result)
     
-    # group 0 - long survival group (wild type)
-    # group 1 - short survival group (mu type)
+    # group 0 - long survival group (wild type), control
+    # group 1 - short survival group (mu type), case
     if survFit_result.iloc[0, 4] > survFit_result.iloc[1, 4]:
         return False
     else:

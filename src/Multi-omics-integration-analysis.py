@@ -159,8 +159,8 @@ if __name__ == "__main__":
 
     # PDBid
     gene_list = result_combine_dgidb.loc[:, 'gene'].to_list()
-    pdb_df = get_pdb_structure_id(gene_list)
-    result_combine_pdbid = pd.merge(left=result_combine_dgidb, right=pdb_df, left_on='gene', right_on='GENE_NAME', how='left')
+    gene_list_map = symbol2pdb(gene_list)
+    result_combine_pdbid = pd.merge(left=result_combine_dgidb, right=gene_list_map, left_on='gene', right_on='query', how='left').drop(columns = ['query'])
     print("PDBid Combine Finished!")
 
     # Protein Atlas

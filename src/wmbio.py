@@ -23,6 +23,9 @@ else :
 import time
 import json
 import zlib
+import urllib.request
+import codecs
+
 from pypdb import *
 from xml.etree import ElementTree
 from urllib.parse import urlparse, parse_qs, urlencode
@@ -1145,7 +1148,9 @@ def get_pdb_structure_id(gene_list):
     job_id = submit_id_mapping(
         from_db="Gene_Name", to_db="UniProtKB", taxid=9606, ids=gene_list
     )
-
+    
+    print(job_id)
+    
     link = get_id_mapping_results_link(job_id)
     mapping_result = get_id_mapping_results_stream(link + tsv_loader)
     mapping_result = list(map(lambda x : x.split("\t"), mapping_result))
@@ -1176,6 +1181,38 @@ def get_pdb_structure_id(gene_list):
     pdb_collapse['pdbID'] = pdb_collapse.apply(lambda x : ';'.join(set(x['pdbID'])),axis = 1)
     
     return pdb_collapse
+
+def query_mariadb(db, query):
+    # Connect to MariaDB (mariadb.connect 대신 pymysql.connect 로 해도 된다)
+    dbconn = pymysql.connect(
+        user="root",
+        password="sempre813!",
+        host="192.168.0.91",
+        port=3306,
+        database=db
+    )
+ 
+    # dbconn = mydb.cursor()  # 이 명령어는 불필요.
+    # mariaDB Query to Pandas DataFrame
+    query_result= pd.read_sql(query,dbconn)
+    dbconn.close()
+ 
+    return query_result
+
+# mygene api
+def symbol2pdb(gene_list):
+    headers = {'content-type': 'application/x-www-form-urlencoded'}
+    params = 'q='+ ','.join(gene_list)+' &scopes=symbol&fields=taxid,pdb'
+    res = requests.post('http://mygene.info/v3/query', data=params, headers=headers)
+    out = pd.DataFrame(json.loads(codecs.decode(bytes(res.text, 'utf-8'), 'utf-8-sig')))
+    out = out[out.taxid == 9606]
+    out = out[out.pdb.notna()]
+    out = out.loc[:, ['query', 'pdb']]
+
+    out['pdbCount'] = out.apply(lambda x : len(x['pdb']) if isinstance(x['pdb'], list) else 1, axis=1)
+    out['pdb'] = out.apply(lambda x : ';'.join(x['pdb']),axis = 1)
+    
+    return out
 
 if __name__ == "__main__": 
     print("not main")

@@ -188,7 +188,7 @@ dgidb_interaction <- function(gene_name){
   result_list %>% bind_rows() %>% return()
 }
 
-symbol2ensembl <- function(DF){
+protein_atlas <- function(DF){
   suppressMessages({
     protein_atlas_url <- "https://www.proteinatlas.org/"
     gene_list <- DF %>% 
@@ -762,3 +762,51 @@ stand_alone_deg <- function(cancer_type, subgroup_path, deg_path){
     } 
   }
 }
+
+# preprocessing
+mut_load <- function(MAF_PATH){
+  mutation_type <- c('Nonsense_Mutation', 'Missense_Mutation', 'Frame_Shift_Del', 
+                     'Frame_Shift_Ins','Splice_Site' )
+  
+  mut <- data.table::fread(file = MAF_PATH) %>% 
+    as_tibble() %>% 
+    select(Tumor_Sample_Barcode, everything()) %>% 
+    filter(str_detect(Tumor_Sample_Barcode, 'TCGA-[A-Z0-9]+-[A-Z0-9]+-01')) %>%
+    filter(Variant_Classification %in% mutation_type) %>% 
+    group_by(Tumor_Sample_Barcode, Hugo_Symbol) %>% 
+    summarise(cnt = n()) %>% 
+    mutate(cnt = 1) 
+  
+  tumor_barcode <- mut %>% 
+    pull(Tumor_Sample_Barcode) %>% 
+    unique()
+  
+  tcga_mut <- lapply(X = tumor_barcode, FUN = function(id){
+    longtowide <- mut %>% 
+      filter(Tumor_Sample_Barcode == id) %>%
+      pivot_wider(names_from = "Tumor_Sample_Barcode", values_from = "cnt")
+  }) %>% 
+    purrr::reduce(.x = ., full_join, by = "Hugo_Symbol") %>% 
+    replace(is.na(.), 0)
+  
+  tcga_mut_t <- tcga_mut %>% select(-Hugo_Symbol) %>% t()
+  colnames(tcga_mut_t) <- tcga_mut %>% pull(Hugo_Symbol)
+  
+  # rowname
+  row_name <- tcga_mut_t %>% rownames() %>% 
+    lapply(X = ., FUN = function(value){
+      regex_patern = 'TCGA-[A-Z0-9]+-[A-Z0-9]+-01'
+      str_extract_all(string = value, pattern = regex_patern) %>% 
+        .[[1]] %>% 
+        return()
+    }) %>% 
+    unlist() %>% 
+    tibble(sample = .)
+  
+  tcga_mut_t %>% as_tibble() %>% bind_cols(row_name, .) %>% 
+    return()
+}
+
+
+
+

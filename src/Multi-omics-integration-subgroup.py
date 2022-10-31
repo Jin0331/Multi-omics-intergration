@@ -11,30 +11,17 @@ python src/Multi-omics-integration-subgroup.py \
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
-from wmbio import * 
+from detectionFunction import * 
+import venn
 import argparse
 
 if __name__ == "__main__": 
-
-    ### Setting RAM GPU for training growth 
-    # gpus = tf.config.list_physical_devices('GPU')
-    # if gpus:
-    #     try:
-    #         # Currently, memory growth needs to be the same across GPUs
-    #         for gpu in gpus:
-    #             tf.config.experimental.set_memory_growth(gpu, True)
-    #         logical_gpus = tf.config.list_logical_devices('GPU')
-    #         print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-    #     except RuntimeError as e:
-    #     # Memory growth must be set before GPUs have been initialized
-            # print(e)
 
     parser = argparse.ArgumentParser(description='Subgroup Detection!')
     parser.add_argument('-b', '--base', required=True, type=str, help='Root Path')
     parser.add_argument('-c', '--cancer', required=True, type=str, help='Types of cancer')
     parser.add_argument('-e', '--cycle', default=100, type=int, help='configuration of the name of output without a filename extension')
     parser.add_argument('-n', '--threads', default=16, type=int, help='parallelism threads')
-
     static_args = parser.parse_args()
 
     # file path
@@ -43,21 +30,16 @@ if __name__ == "__main__":
     CYCLE = int(static_args.cycle)
     THREAD = int(static_args.threads)
 
-    # tensorflow thread cofigure
-    # tf.config.threading.set_intra_op_parallelism_threads(THREAD)
-    # tf.config.threading.set_inter_op_parallelism_threads(THREAD)  
-
     RAW_file_path = os.getcwd() + "/RAW_DATA/"
     PKL_file_path = os.getcwd() + "/pkl/"
     MODEL_PATH = os.getcwd() + "/models/"
-    TENSORBOARD_PATH = os.getcwd() + '/log'
     GROUP_PHTH = os.getcwd() + '/group/'
     PNG_PATH = os.getcwd() + '/png/'
     GROUP_VALIDATION_PATH = os.getcwd() + '/group_validation/'
     DEG_PATH = os.getcwd() + "/deg/"
 
     # Data-load
-    omics = load_tcga_dataset(pkl_path=PKL_file_path, raw_path=RAW_file_path, cancer_type=CANCER_TYPE, norm=True)
+    omics = load_tcga_dataset_version1(pkl_path=PKL_file_path, raw_path=RAW_file_path, cancer_type=CANCER_TYPE, norm=True)
     X_train, X_test = train_test_split(omics, test_size = .2, random_state = 21, shuffle=True)
 
 
@@ -73,9 +55,9 @@ if __name__ == "__main__":
         print(FILE_NAME)
         
         ## AE(vanilla, sparse, denoisy) - Model compile & Fit
-        encoder_vanilla = run_ae(X_train=X_train, X_test=X_test, tensorboard_path=TENSORBOARD_PATH)
-        encoder_sparse = run_ae_sparse(X_train=X_train, X_test=X_test, tensorboard_path=TENSORBOARD_PATH)
-        encoder_denoisy = run_ae_denoisy(X_train=X_train, X_test=X_test, tensorboard_path=TENSORBOARD_PATH)
+        encoder_vanilla = run_ae(X_train=X_train, X_test=X_test)
+        encoder_sparse = run_ae_sparse(X_train=X_train, X_test=X_test)
+        encoder_denoisy = run_ae_denoisy(X_train=X_train, X_test=X_test)
 
         group, silhouette_score = best_ae_model(model_list=[encoder_vanilla, encoder_sparse, encoder_denoisy], o=omics,
                     group_path=GROUP_PHTH, model_path=MODEL_PATH, cancer_type=CANCER_TYPE, raw_path=RAW_file_path, file_name=FILE_NAME)
@@ -90,8 +72,6 @@ if __name__ == "__main__":
 
         ### Survival Analysis - logranktest
         log_pvalue = log_rank_test_py(df=omics_preprocess["omics"].iloc[:, :3], png_path=PNG_PATH, cancer_type = CANCER_TYPE,file_name=FILE_NAME)
-        # log_pvalue = log_rank_test(df=omics_preprocess["omics"], png_path=PNG_PATH, cancer_type = CANCER_TYPE,file_name=FILE_NAME)  
-
         tmb_pvalue = tmb_t_test(group, RAW_file_path)
 
         ### Score
@@ -130,11 +110,12 @@ if __name__ == "__main__":
         print('Silhouette score : {0}\nCox-ph Log Rank Test : {1}\nTMB T-test : {2}'.format(silhouette_score_l, log_pvalue_l, tmb_pvalue_l))
       
         # score table
-        if not os.path.exists(GROUP_VALIDATION_PATH):
+        if not os.path.exists(GROUP_VALIDATION_PATH + CANCER_TYPE + "_validation.csv"):
             Path(GROUP_VALIDATION_PATH).mkdir(parents=True, exist_ok=True)
-            score_df.to_csv(GROUP_VALIDATION_PATH + CANCER_TYPE + "_validation.csv", index=False, mode='w')
-        else:
-            score_df.to_csv(GROUP_VALIDATION_PATH + CANCER_TYPE + "_validation.csv", index=False, mode='a', header=False)
-  
+            with open(GROUP_VALIDATION_PATH + CANCER_TYPE + "_validation.csv",'w') as file :
+                write = csv.writer(file)
+                write.writerow(score_df.columns.to_list())    
+        score_df.to_csv(GROUP_VALIDATION_PATH + CANCER_TYPE + "_validation.csv", index=False, mode='a', header=False)  
+
       except Exception as e:
         print("Skip this epoke : ", e)

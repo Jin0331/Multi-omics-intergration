@@ -1,4 +1,5 @@
 # modules
+import venn
 import os
 from turtle import delay
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -22,9 +23,11 @@ else :
 
 import time
 import json
+import subprocess
 import zlib
 import urllib.request
 import codecs
+import csv
 
 from pypdb import *
 from xml.etree import ElementTree
@@ -48,47 +51,23 @@ from itertools import chain
 import matplotlib.pyplot as plt
 from matplotlib_venn import venn3_unweighted
 from matplotlib import rcParams
-from IPython.display import SVG
-from numba import cuda
 import gc
-
-# lifelines
-from lifelines import KaplanMeierFitter
-from lifelines.statistics import logrank_test
-from lifelines import CoxPHFitter
-from lifelines.utils import k_fold_cross_validation
 
 # sklearn
 from sklearn import svm
 from sklearn.cluster import KMeans
 from sklearn.impute import KNNImputer
-from sklearn.manifold import TSNE
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import f_classif
-from sklearn.feature_selection import mutual_info_classif
-from sklearn import metrics
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.feature_selection import SelectFromModel, SelectKBest, f_classif, mutual_info_classif
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.model_selection import GridSearchCV, RepeatedStratifiedKFold, train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import SelectFromModel
-from sklearn.model_selection import cross_val_score
-
 from xgboost import XGBClassifier
 
 # keras
-from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.layers import Dense, Input, Lambda, Add, Multiply, Layer, BatchNormalization, Activation
-from tensorflow.keras.preprocessing import sequence
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint,Callback
-from tensorflow.keras import metrics, optimizers
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras import backend as K
-from tensorflow.keras.utils import model_to_dot
 
 # rpy2
 os.environ['R_HOME'] = R_HOME # env R invoke
@@ -105,7 +84,6 @@ aws_mariadb_url = 'mysql+pymysql://root:sempre813!@192.168.0.91:3306/Textmining'
 engine_mariadb = create_engine(aws_mariadb_url)  
 
 # function
-
 def cancer_select(cols, cancer_type, raw_path):
     # phenotype
     phe1 = pd.read_csv(raw_path + "GDC-PANCAN.basic_phenotype.tsv", sep="\t")
@@ -125,6 +103,18 @@ def cancer_select(cols, cancer_type, raw_path):
     
     return intersect_
 
+def mc3Mut_load(MAF_PATH):
+    r = ro.r
+    r['source']('src/r-function.R')
+    mut_load = ro.globalenv['mut_load']
+    
+    mut = mut_load(MAF_PATH)
+    
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        mut = ro.conversion.rpy2py(mut)
+    
+    return mut
+
 def non_zero_column(DF):
     sample_cnt = int(len(DF.columns) * 0.2)
     zero_row = dict(DF.isin([0]).sum(axis=1))
@@ -136,7 +126,29 @@ def non_zero_column(DF):
     
     return non_remove_feature
 
-def load_tcga_dataset(pkl_path, raw_path, cancer_type, norm, minmax=None):    
+def load_tcga_dataset_version1(pkl_path:str, raw_path:str, cancer_type:str, norm:bool, minmax:bool=None) -> pd.DataFrame :    
+
+    """
+    Multi-omics load
+    ===========
+    
+    Args:
+         pkl_path (str) : 각 Omics의 pickle이 저장된 Path (없어도 됨, 첫 실행시 생성)
+         raw_path (str) : 각 Omics의 TCGA Pan-Cancer(PANCAN) RAW 파일 (*.gz), https://xenabrowser.net/datapages/?cohort=TCGA%20Pan-Cancer%20(PANCAN)&removeHub=https%3A%2F%2Fxena.treehouse.gi.ucsc.edu%3A443
+         cancer_type (str) : TCGA abbreviation, e.g., COAD
+         norm (bool) : MinMaxScaler, StandardScaler
+         minmax (bool) : MinxmaxScaler 사용 유무
+    
+    Return Pandas DataFrame
+
+    Note :
+         - 특정 Primary tumor의 mRNA, miRNA, Mehtylatio 이 통합된 Dataframe. Row : Sample X Column : Feature (omics)
+         - mRNA : Tcga_RSEM_Hugo_norm_count.xena.gz
+         - miRNA : Batch_effects_normalized_miRNA.xena.gz
+         - Methylation : Methylation450K.xena.gz
+
+    """
+
     if os.path.isfile(pkl_path + cancer_type + "_omics.pkl"):
         omics = pd.read_pickle(pkl_path  + cancer_type + "_omics.pkl")
 
@@ -279,17 +291,20 @@ def load_tcga_dataset(pkl_path, raw_path, cancer_type, norm, minmax=None):
 
     return omics
 
-def root_mean_squared_log_error(y_true, y_pred):
-    msle = tf.keras.losses.MeanSquaredLogarithmicError()
-    return K.sqrt(msle(y_true, y_pred)) 
-
-def make_Tensorboard_dir(dir_name):
-    root_logdir = os.path.join(os.curdir, dir_name) 
-    sub_dir_name = datetime.datetime.now().strftime("%Y%m%d-%H%M%S") 
-    return os.path.join(root_logdir, sub_dir_name)
-
 # autoencoder
-def run_ae(X_train, X_test, tensorboard_path):
+def run_ae(X_train : pd.DataFrame, X_test : pd.DataFrame):
+
+    """
+    Stacked Auto-Encoer (vanilla)
+    ===========
+    
+    Args:
+         X_train (pd.DataFrame) : Omics DataFrame
+         X_test (pd.DataFrame) : Omics DataFrame
+    
+    Return Encoder model
+    """
+
     tf.compat.v1.reset_default_graph()
     tf.keras.backend.clear_session()
 
@@ -322,11 +337,6 @@ def run_ae(X_train, X_test, tensorboard_path):
     # encdoer mdoel
     encoder = Model(inputs = model.input, outputs = bottleneck)
 
-    # callback function
-    # es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=3)
-    TB_log_dir = make_Tensorboard_dir(tensorboard_path)
-    TensorB = tf.keras.callbacks.TensorBoard(log_dir = TB_log_dir)
-
     # compile & fit
     model.compile(loss = "mean_squared_error",
                   optimizer = "adam")
@@ -336,14 +346,25 @@ def run_ae(X_train, X_test, tensorboard_path):
         batch_size = 128,
         epochs = 30,
         verbose = 0,
-        validation_data = (X_test, X_test),
-        callbacks = [TensorB]
+        validation_data = (X_test, X_test)
     ) 
     
     return encoder
 
 # autoencoder
-def run_ae_denoisy(X_train, X_test, tensorboard_path):
+def run_ae_denoisy(X_train : pd.DataFrame, X_test : pd.DataFrame):
+
+    """
+    Denoise Auto-Encoer
+    ===========
+    
+    Args:
+         X_train (pd.DataFrame) : Omics DataFrame
+         X_test (pd.DataFrame) : Omics DataFrame
+    
+    Return Encoder model
+    """
+
     tf.compat.v1.reset_default_graph()
     tf.keras.backend.clear_session()
 
@@ -381,10 +402,6 @@ def run_ae_denoisy(X_train, X_test, tensorboard_path):
     # encdoer mdoel
     encoder = Model(inputs = model.input, outputs = bottleneck)
 
-    # callback function
-    # es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=3)
-    TB_log_dir = make_Tensorboard_dir(tensorboard_path)
-    TensorB = tf.keras.callbacks.TensorBoard(log_dir = TB_log_dir)
 
     # compile & fit
     model.compile(loss = "mean_squared_error",
@@ -395,13 +412,24 @@ def run_ae_denoisy(X_train, X_test, tensorboard_path):
         batch_size = 128,
         epochs = 30,
         verbose = 0,
-        validation_data = (X_test, X_test),
-        callbacks = [TensorB]
+        validation_data = (X_test, X_test)
     ) 
     
     return encoder
 
-def run_ae_sparse(X_train, X_test, tensorboard_path):
+def run_ae_sparse(X_train : pd.DataFrame, X_test : pd.DataFrame):
+
+    """
+    Sparse Auto-Encoer
+    ===========
+    
+    Args:
+         X_train (pd.DataFrame) : Omics DataFrame
+         X_test (pd.DataFrame) : Omics DataFrame
+    
+    Return Encoder model
+    """
+
     tf.compat.v1.reset_default_graph()
     tf.keras.backend.clear_session()
     
@@ -421,11 +449,6 @@ def run_ae_sparse(X_train, X_test, tensorboard_path):
     # encdoer mdoel
     encoder = Model(inputs = model.input, outputs = e)
 
-    # callback function
-    # es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=3)
-    TB_log_dir = make_Tensorboard_dir(tensorboard_path)
-    TensorB = tf.keras.callbacks.TensorBoard(log_dir = TB_log_dir)
-
     # compile & fit
     model.compile(loss = "mean_squared_error",
                   optimizer = "adam")
@@ -436,14 +459,119 @@ def run_ae_sparse(X_train, X_test, tensorboard_path):
         batch_size = 128,
         epochs = 30,
         verbose = 0,
-        validation_data = (X_test, X_test),
-        callbacks = [TensorB]
+        validation_data = (X_test, X_test)
     ) 
     
     return encoder
 
+def best_ae_model(model_list:list, o:pd.DataFrame, group_path:str, model_path:str, cancer_type:str, file_name:str, raw_path:str,
+                  model_names:list = ['encoder_vanilla', 'encoder_sparse', 'encoder_denoisy']):
+
+    """
+    Best Auto encoder selection
+    ===========
+    
+    Args:
+         model_list (list) : run_ae, run_ae_sparse, run_ae_denoisy의 tensorflow model
+         o (pd.DataFrame) : Omics DataFrame
+
+    Return 
+        K-mean clustering sampling 후 classifiaction 된 Pandas DataFrame
+        Silhouette Coefficient
+
+    Note :
+        - 3개의 Autoencoder 중 Silhouette Coefficient이 가장 좋은 Autoencoder model 선택 
+        - K-means clustring 및 Silhouette Coefficient 추출
+        - https://nicola-ml.tistory.com/6
+    """
+    
+    def model_prediction(model):
+
+        """
+        Encoder Prediction
+        ===========
+        
+        Args:
+            model (tensorflow model) : encoder
+            
+        Return 
+            K-mean clustering sampling 후 classifiaction 된 Pandas DataFrame
+            Silhouette Coefficient
+            - nb_result_list[?][0] - silhoaute score
+        """    
+
+        if model[1] == 'encoder_denoisy':
+            noise_factor = 0.5
+            o2 = o + noise_factor + np.random.normal(loc=0.0, scale=0.3, size=o.shape)
+        else :
+            o2 = o
+        
+        omic_encoded = pd.DataFrame(model[0].predict(o2))
+        column_name = ["Feature" + str(index) for index in range(1, len(omic_encoded.columns) + 1)]
+        omic_encoded.columns = column_name
+
+        omic_encoded['sample'] = o2.index.to_list()
+        omic_encoded.set_index('sample', inplace=True)
+      
+        # pheno = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
+        #             sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
+        pheno = pd.read_csv(raw_path + "Survival_SupplementalTable_S1_20171025_xena_sp",
+                            sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
+
+        # encoded pheno
+        omic_encoded_pheno = pd.merge(left=omic_encoded, right=pheno, how="inner", on="sample")
+        omic_encoded_pheno.set_index('sample', inplace=True)
+        
+        # log rank test
+        omic_encoded_fc = omic_encoded[log_test(omic_encoded_pheno)]
+        nb_result = nb_cluster(omic_encoded_fc)
+        
+        return nb_result.iloc[:, 0].to_list()[0], omic_encoded_fc
+    
+    # best model selection
+    nb_result_list = list(map(model_prediction, list(zip(model_list, model_names))))
+    zipbObj = zip(model_names, list(zip(nb_result_list, model_list)))
+    model_sil = dict(zipbObj)
+    model_sil_sort = sorted(model_sil.items(), key = lambda item : item[1][0], reverse=True) 
+    best_model_n, best_model, s_score, encoded = model_sil_sort[0][0], model_sil_sort[0][1][1], model_sil_sort[0][1][0][0],   model_sil_sort[0][1][0][1]
+    
+    # model save
+    Path(model_path).mkdir(parents=True, exist_ok=True)
+    Path(model_path + cancer_type).mkdir(parents=True, exist_ok=True)
+    best_model.save(model_path + cancer_type + "/" + "AE_" + best_model_n + "_"+ cancer_type + "_" + file_name)
+    
+    pr = 'Best AE : {0}'.format(best_model_n)
+    print(pr)
+    
+    # k-mean clustering
+    clusterer = KMeans(n_clusters = 2, random_state = 31, max_iter = 1000)
+    kmeans = clusterer.fit_predict(encoded)
+    
+    ae_groups = pd.DataFrame(kmeans, columns = ['group'])
+    ae_groups['sample'] = encoded.index.to_list()
+    ae_groups.set_index('sample', inplace=True)
+    
+    # dir check
+    Path(group_path).mkdir(parents=True, exist_ok=True)
+    Path(group_path + cancer_type).mkdir(parents=True, exist_ok=True)
+    ae_groups.to_csv(group_path + cancer_type + "/" + cancer_type + "_GROUP_" + file_name + ".txt", sep="\t")
+    
+    return ae_groups, s_score
+
 # invoke r
-def log_test(df):
+def log_test(df:pd.DataFrame) -> list:
+    
+    """
+    Stacked Auto-Encoer (vanilla)
+    ===========
+    
+    Args:
+         X_train (pd.DataFrame) : Omics DataFrame
+         X_test (pd.DataFrame) : Omics DataFrame
+    
+    Return Encoder model
+    """
+
     # pandas DF to R DF
     with localconverter(ro.default_converter + pandas2ri.converter):
         r_from_pd_df = ro.conversion.py2rpy(df)
@@ -495,50 +623,6 @@ def log_rank_test_py(df, png_path, cancer_type, file_name):
 
     return survDiff_pvalue[0]
 
-
-# def log_rank_test(df, png_path, cancer_type, file_name):
-#     group_size = len(set(df.loc[:, ["group"]].iloc[:,0].to_list()))
-#     labels = ["G" + str(index) for index in range(group_size)]
-    
-#     groups = df.dropna().iloc[:, 0].to_list()
-#     events = df.dropna().iloc[:, 1].to_list()
-#     times = df.dropna().iloc[:, 2].to_list()
-
-#     E = np.array(events, dtype=np.int32)
-#     T = np.array(times, dtype=np.float32)
-    
-#     #### 3. matplotlib parameter
-#     rcParams.update({'font.size': 12})
-#     fig, ax = plt.subplots(figsize=(5,5))
-#     styles = ['-', '--']
-#     colors = ['r', 'g']
-#     lw = 3
-
-#     #### 4. Kaplan-Meier 
-#     kmf = KaplanMeierFitter()
-#     for i, label in enumerate(labels):
-#         ix = np.array(groups) == i
-#         kmf.fit(T[ix], event_observed=E[ix], label=labels[i])
-#         kmf.plot(ax=ax, ci_show=False, linewidth=lw, style=styles[i], c=colors[i])
-
-#     #### 5. Logrank test
-#     ix = np.array(groups) == 1
-#     result = logrank_test(T[ix], T[~ix], E[ix], E[~ix], alpha=.99)
-#     pvalue = result.p_value
-#     ax.text(50,0.3,'P-value=%.6f'% pvalue) # 위치(3.4,0.75) 수동으로 지정필요
-
-#     #### 6. 
-#     ax.set_xlabel('Time', fontsize=14)
-#     ax.set_ylabel('Survival', fontsize=14)
-#     ax.legend(loc='upper right')
-
-#     plt.tight_layout()
-#     plt.ioff()
-#     Path(png_path + "/" + cancer_type).mkdir(parents=True, exist_ok=True)
-#     plt.savefig(png_path + "/" + cancer_type + "/" + file_name + "_logrank.png", format='png', dpi=500)
-
-#     return pvalue
-
 # invoke r
 def nb_cluster(df):
     # pandas DF to R DF
@@ -556,85 +640,7 @@ def nb_cluster(df):
         
     return omic_encoded_fc_r
 
-# # invoke r
-# def survfit(df, file_name):
-#     # pandas DF to R DF
-#     with localconverter(ro.default_converter + pandas2ri.converter):
-#         r_from_pd_df = ro.conversion.py2rpy(df)
 
-#     # R UDF invoke
-#     r = ro.r
-#     r['source']('src/r-function.R')
-#     km_survival_r = ro.globalenv['km_survival']
-#     km_survival_r(r_from_pd_df, file_name, PNG_PATH)
-
-def best_ae_model(model_list, o, group_path, model_path, cancer_type, file_name, raw_path,
-                  model_names = ['encoder_vanilla', 'encoder_sparse', 'encoder_denoisy']):
-    
-    def model_prediction(model):
-        
-        if model[1] == 'encoder_denoisy':
-            noise_factor = 0.5
-            o2 = o + noise_factor + np.random.normal(loc=0.0, scale=0.3, size=o.shape)
-        else :
-            o2 = o
-        
-        omic_encoded = pd.DataFrame(model[0].predict(o2))
-        column_name = ["Feature" + str(index) for index in range(1, len(omic_encoded.columns) + 1)]
-        omic_encoded.columns = column_name
-
-        omic_encoded['sample'] = o2.index.to_list()
-        omic_encoded.set_index('sample', inplace=True)
-      
-        # pheno = pd.read_csv("https://tcga-pancan-atlas-hub.s3.us-east-1.amazonaws.com/download/Survival_SupplementalTable_S1_20171025_xena_sp", 
-        #             sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
-        pheno = pd.read_csv(raw_path + "Survival_SupplementalTable_S1_20171025_xena_sp",
-                            sep = "\t", usecols=['sample', 'OS', 'OS.time', 'DSS', 'DSS.time', 'DFI', 'DFI.time', 'PFI', 'PFI.time'])
-
-        # encoded pheno
-        omic_encoded_pheno = pd.merge(left=omic_encoded, right=pheno, how="inner", on="sample")
-        omic_encoded_pheno.set_index('sample', inplace=True)
-        
-        # log rank test
-        omic_encoded_fc = omic_encoded[log_test(omic_encoded_pheno)]
-        nb_result = nb_cluster(omic_encoded_fc)
-        
-        return nb_result.iloc[:, 0].to_list()[0], omic_encoded_fc
-    
-    # each model, prediction
-    # nb_result_list[?][0] - silhoaute score
-    # nb_result_list[?][1] - encoded
-    
-    # best model selection
-    nb_result_list = list(map(model_prediction, list(zip(model_list, model_names))))
-    zipbObj = zip(model_names, list(zip(nb_result_list, model_list)))
-    model_sil = dict(zipbObj)
-    model_sil_sort = sorted(model_sil.items(), key = lambda item : item[1][0], reverse=True) 
-    best_model_n, best_model, s_score, encoded = model_sil_sort[0][0], model_sil_sort[0][1][1], model_sil_sort[0][1][0][0],   model_sil_sort[0][1][0][1]
-    
-    # model save
-    Path(model_path).mkdir(parents=True, exist_ok=True)
-    Path(model_path + cancer_type).mkdir(parents=True, exist_ok=True)
-    best_model.save(model_path + cancer_type + "/" + "AE_" + best_model_n + "_"+ cancer_type + "_" + file_name)
-    
-    pr = 'Best AE : {0}'.format(best_model_n)
-    print(pr)
-      
-    
-    # k-mean clustering
-    clusterer = KMeans(n_clusters = 2, random_state = 31, max_iter = 1000)
-    kmeans = clusterer.fit_predict(encoded)
-    
-    ae_groups = pd.DataFrame(kmeans, columns = ['group'])
-    ae_groups['sample'] = encoded.index.to_list()
-    ae_groups.set_index('sample', inplace=True)
-    
-    # dir check
-    Path(group_path).mkdir(parents=True, exist_ok=True)
-    Path(group_path + cancer_type).mkdir(parents=True, exist_ok=True)
-    ae_groups.to_csv(group_path + cancer_type + "/" + cancer_type + "_GROUP_" + file_name + ".txt", sep="\t")
-    
-    return ae_groups, s_score
         
     
 ## For Target
@@ -965,14 +971,14 @@ def dgidb_extract(gene_list, parallel=None):
         
     return dgidb_result
 
-def symboltoEnsembl(df):
+def proteinAtlas_extract(df):
     # pandas DF to R DF
     with localconverter(ro.default_converter + pandas2ri.converter):
         sybmol_df = ro.conversion.py2rpy(df)
 
     r = ro.r
     r['source']('src/r-function.R')
-    symbol_mapping = ro.globalenv['symbol2ensembl']
+    symbol_mapping = ro.globalenv['protein_atlas']
     symbol_df = symbol_mapping(sybmol_df)
 
     # R DF to pandas DF
@@ -1210,9 +1216,57 @@ def symbol2pdb(gene_list):
     out = out.loc[:, ['query', 'pdb']]
 
     out['pdbCount'] = out.apply(lambda x : len(x['pdb']) if isinstance(x['pdb'], list) else 1, axis=1)
-    out['pdb'] = out.apply(lambda x : ';'.join(x['pdb']),axis = 1)
+    out['pdb'] = out.apply(lambda x : ';'.join(x['pdb']) if isinstance(x['pdb'], list) else x['pdb'],axis = 1)
     
     return out
+
+# OncoKB curated gene
+def oncokb_allcuratedGenes():
+
+    ONCOKB_TOKEN = query_mariadb(db="TOKEN", query="SELECT * FROM ONCOKB").TOKEN.to_list()[0]
+
+    proc = subprocess.run(["curl",  "-X", "GET",  
+                           'https://www.oncokb.org/api/v1/utils/allCuratedGenes.txt?includeEvidence=true',
+                           '-H', 'accept: application/json',
+                           '-H', 'Authorization: Bearer '+ ONCOKB_TOKEN[0]
+
+                          ],
+                       stdout=subprocess.PIPE, encoding='utf-8')
+
+    oncokb_curated = proc.stdout
+    oncokb_curated_df = pd.DataFrame(list(map(lambda x: x.split("\t"), oncokb_curated.split('\n'))))
+    oncokb_curated_df.columns = oncokb_curated_df.iloc[0]
+    oncokb_curated_df.drop(oncokb_curated_df.index[0], inplace=True)
+    oncokb_curated_df = oncokb_curated_df.loc[:, ['Hugo Symbol', 'Is Oncogene', 'Is Tumor Suppressor Gene', 'Highest Level of Evidence(sensitivity)',
+           'Highest Level of Evidence(resistance)', 'Background']]
+    oncokb_curated_df.columns = ['gene'] + ["OncoKB_" + value for value in oncokb_curated_df.columns[1:]]
+    
+    return oncokb_curated_df
+
+def norm_function(omics, norm, minmax):
+    omics_index = omics.index.to_list()
+
+    # normalization
+    if norm:
+        if minmax:
+            scalerX = MinMaxScaler()
+            omics_scale = scalerX.fit_transform(omics)
+        else :
+            scalerX = StandardScaler()      
+            omics_scale = scalerX.fit_transform(omics)
+    
+    return omics_scale
+
+def impute_function(omics):
+    omics_index = omics.index.to_list()
+    
+    imputer = KNNImputer(n_neighbors=10)
+    omics_impute = imputer.fit_transform(omics)
+
+    omics = pd.DataFrame(omics_impute, columns=omics.columns)
+    omics.index = omics_index
+    
+    return omics
 
 if __name__ == "__main__": 
     print("not main")

@@ -8,7 +8,8 @@ example : python src/Multi-omics-integration-analysis.py \
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
-from wmbio import * 
+from analysisFunction import * 
+import venn
 import argparse
 
 if __name__ == "__main__": 
@@ -65,9 +66,9 @@ if __name__ == "__main__":
  
     # Condition for Filtering
     filter_cond = (group_score['Silhouette'] >= SILHOUETTE) & (group_score['Log Rank Test'] < 0.05) & (group_score['TMB T-Test'] < 0.05) & \
-              ((group_score['RNA_ANOVA_F1'] > RNA_ANOVA) | (group_score['RNA_RF_F1'] > RNA_RF)) & \
-              ((group_score['miRNA_ANOVA_F1'] > MIRNA_ANOVAR) | (group_score['miRNA_RF_F1'] > MIRNA_RF)) & \
-              ((group_score['Methylation_ANOVA_F1'] > MT_ANOVAR) | (group_score['Methylation_RF_F1'] > MT_RF))
+              ((group_score['RNA_ANOVA_F1'] >= RNA_ANOVA) | (group_score['RNA_RF_F1'] >= RNA_RF)) & \
+              ((group_score['miRNA_ANOVA_F1'] >= MIRNA_ANOVAR) | (group_score['miRNA_RF_F1'] >= MIRNA_RF)) & \
+              ((group_score['Methylation_ANOVA_F1'] >= MT_ANOVAR) | (group_score['Methylation_RF_F1'] >= MT_RF))
               
     group_score = group_score[filter_cond].sort_values(["Silhouette"], ascending = (False))
     bestSubgroup = group_score.FILENAME.to_list()
@@ -135,7 +136,7 @@ if __name__ == "__main__":
                                   rdata_path=RDATA_PATH, deg_path=DEG_PATH, batch_removal=True)
 
     nt_tp_deseq2_col = nt_tp_deseq2[['row', 'log2FoldChange', 'pvalue']]
-    nt_tp_deseq2_col.columns = ['gene', 'NT-TP_log2FoldChange', 'padj']
+    nt_tp_deseq2_col.columns = ['gene', 'NT-TP_Log2FC', 'NT-TP.Padj']
 
     result_combine = pd.merge(left=dea_combine, right=nt_tp_deseq2_col, on='gene', how = 'left')   
     print("NT-TP DEA Combine Finished!")
@@ -148,25 +149,37 @@ if __name__ == "__main__":
 
     # tm_df = reduce(lambda q1, q2 : pd.merge(left = q1, right = q2, on="gene", how='outer'), map(db_query, query_types))
     tm_df = textmining_extract(query_types=query_types)
+    tm_df.columns = ['gene', 'TM.type', 'TM.Support', 'TM.Confidence', 'TM.Lift', 'TM.Count']
     result_combine_tm = pd.merge(left=result_combine, right=tm_df, on="gene", how='left')
     print("Textmining Combine Finished!")
 
     # DGIdb
     gene_list = result_combine_tm.loc[:, 'gene'].to_list()
-    result_dgidb = dgidb_extract(gene_list, True)
-    result_combine_dgidb = pd.merge(left=result_combine_tm, right=result_dgidb, on='gene', how='left')
+    dgidb_df = dgidb_extract(gene_list, True)
+    dgidb_df.columns = ['gene', 'DGI.Gene Category', 'DGI.DrugName;Score;Type', 'DGI.Count']
+    result_combine_dgidb = pd.merge(left=result_combine_tm, right=dgidb_df, on='gene', how='left')
     print("DGIdb Combine Finished!")
 
     # PDBid
     gene_list = result_combine_dgidb.loc[:, 'gene'].to_list()
-    gene_list_map = symbol2pdb(gene_list)
-    result_combine_pdbid = pd.merge(left=result_combine_dgidb, right=gene_list_map, left_on='gene', right_on='query', how='left').drop(columns = ['query'])
+    pdb_df = symbol2pdb(gene_list)
+    pdb_df.columns = ['gene', 'PDB.Id', 'PDB.Count']
+    result_combine_pdbid = pd.merge(left=result_combine_dgidb, right=pdb_df, on='gene', how='left')
     print("PDBid Combine Finished!")
 
+    # OncoKB
+    oncokb_curated_df = oncokb_allcuratedGenes(RAW_PATH)
+    oncokb_curated_df.columns = ['gene', 'OncoKB.Is Oncogene', 'OncoKB.Is TSG', 
+                      'OncoKB.Highest Level of Evidence(sensitivity)',
+                      'OncoKB.Highest Level of Evidence(resistance)',
+                      'OncoKB.Background']
+    result_combine_oncokb = pd.merge(left=result_combine_pdbid, right=oncokb_curated_df, on='gene', how = 'left')
+    print("OncoKB curated Gene Combine finished!")
+
     # Protein Atlas
-    gene_DF = pd.DataFrame(result_combine_pdbid.loc[:, 'gene'])
-    result_pa = symboltoEnsembl(gene_DF)
-    result_combine_proteinatlas = pd.merge(left=result_combine_pdbid, right=result_pa, on='gene', how = 'left')
+    gene_list = pd.DataFrame(result_combine_pdbid.loc[:, 'gene'])
+    result_pa = proteinAtlas_extract(gene_list)
+    result_combine_proteinatlas = pd.merge(left=result_combine_oncokb, right=result_pa, on='gene', how = 'left')
     print("Protein Atlas Combine finished!")
 
     # Result write

@@ -1,3 +1,4 @@
+ELMER/
 RAW_DATA/
 RData/
 models/
@@ -18,7 +19,7 @@ GDCdata/
 result/
 RESULT/
 src/legacy/
-
+*.pdf
 
 # History files
 .Rhistory

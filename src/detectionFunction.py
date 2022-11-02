@@ -45,12 +45,9 @@ from retry import retry
 
 import pandas as pd
 import numpy as np
-import seaborn as sns
 from functools import reduce
-from itertools import chain
 import matplotlib.pyplot as plt
 from matplotlib_venn import venn3_unweighted
-from matplotlib import rcParams
 import gc
 
 # sklearn

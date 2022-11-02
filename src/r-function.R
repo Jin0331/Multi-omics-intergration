@@ -15,6 +15,8 @@ suppressPackageStartupMessages({
   library(parallel)
   library(AnnotationDbi)
   library(org.Hs.eg.db)
+  library(ELMER)
+  library(ELMER.data)
 })
 
 survFit <- function(sample_group_path, raw_path){
@@ -807,6 +809,113 @@ mut_load <- function(MAF_PATH){
     return()
 }
 
+methylation_analysis <- function(df, pr_name, method_="both", base_dir){
+  
+  suppressMessages({
+  log_save <- paste(base_dir, "ELMER", pr_name, sep = "/")
+  dir.create(paste(base_dir, "ELMER", pr_name, sep = "/"), showWarnings = FALSE, recursive = TRUE)
+  
+  if(file.exists(paste0(log_save, "/", pr_name, "_methylation_filtering.RData"))){
+    load(paste0(log_save, "/", pr_name, "_methylation_filtering.RData"))
+    
+  } else {
+    
+    if(method_ == "both")
+      method_ <- c("hypo", "hyper")
+    
+    if(!file.exists(paste0(log_save, "/", pr_name, "/", pr_name, "_RNA_hg19.rda"))){
+      getTCGA(disease = pr_name, 
+              genome = "hg19",
+              basedir = log_save)  
+      
+    } 
+    load(paste0(log_save, "/", pr_name, "/", pr_name, "_RNA_hg19.rda"))
+    load(paste0(log_save, "/", pr_name, "/", pr_name, "_meth_hg19.rda"))
+    geneExp <- assay(rna)
+    Meth <- assay(met)
+    rm(rna, met);gc()
+    
+    
+    distal.probes <- get.feature.probe(
+      genome = "hg19", 
+      met.platform = "450K", 
+      # rm.chr = paste0("chr",c("Y")) # Y는 male specific
+      rm.chr = paste0('chr', c(1:6, 10:22, "X","Y"))
+    )
+    
+    mae <- createMAE(
+      exp = geneExp, 
+      met = Meth,
+      save = TRUE,
+      linearize.exp = TRUE,
+      save.filename = paste0(log_save, "/", pr_name,"_mae.rda"),
+      filter.probes = distal.probes,
+      met.platform = "450K",
+      genome = "hg19",
+      TCGA = TRUE
+    )
+    
+    sig.diff_list <- list()
+    nearGenes_list <- list()
+    methylation_filtering <- list()
+    enriched.motif_list <- list()
+    TF_list <- list()
+    
+    for(method in method_){
+      sig.diff_list[[method]] <- get.diff.meth(data = mae, 
+                                               group.col = "definition",
+                                               group1 =  "Primary solid Tumor",
+                                               group2 = "Solid Tissue Normal",
+                                               minSubgroupFrac = 0.2, # if supervised mode set to 1
+                                               sig.dif = 0.3,
+                                               diff.dir = method, # Search for hypomethylated probes in group 1
+                                               cores = 20, 
+                                               dir.out = log_save, 
+                                               pvalue = 0.05)
+      
+      nearGenes_list[[method]] <- GetNearGenes(data = mae, 
+                                               probes = sig.diff_list[[method]]$probe, 
+                                               numFlankingGenes = 30)
+      
+      methylation_filtering[[method]] <- get.pair(data = mae,
+                                                  group.col = "definition",
+                                                  group1 =  "Primary solid Tumor",
+                                                  group2 = "Solid Tissue Normal",
+                                                  nearGenes = nearGenes_list[[method]],
+                                                  mode = "unsupervised",
+                                                  permu.dir = log_save,
+                                                  permu.size = 1000, # Please set to 100000 to get significant results
+                                                  raw.pvalue = 0.05,   
+                                                  Pe = 0.001, # Please set to 0.001 to get significant results
+                                                  filter.probes = TRUE, # See preAssociationProbeFiltering function
+                                                  filter.percentage = 0.05,
+                                                  filter.portion = 0.3,
+                                                  dir.out = log_save,
+                                                  cores = 20,
+                                                  label = method)
+    }
+    
+    save(methylation_filtering, file = paste0(log_save, "/", pr_name, "_methylation_filtering.RData"))
+  }
 
+  methylation_filtering_ <- lapply(X = names(methylation_filtering), FUN = function(method){
+    GENE_NAME <- methylation_filtering[[method]]$Symbol
+    P.adjust <- methylation_filtering[[method]]$Pe
+    
+    tmp_df <- tibble(GENE_NAME = GENE_NAME, Methylated = method, P.adjust = P.adjust) %>% 
+      distinct(GENE_NAME, .keep_all = TRUE)
+    colnames(tmp_df) <- c("GENE_NAME", paste0('Methylated_', method),
+                          paste0('P.adjust_', method))
+    return(tmp_df)
+  })
+  
+  names(methylation_filtering_) <- names(methylation_filtering)
+  
+  rs <- df %>% left_join(x = ., y = methylation_filtering_$hypo, by = c("gene"="GENE_NAME")) %>% 
+    left_join(x = ., y = methylation_filtering_$hyper, by =c("gene"="GENE_NAME")) %>% 
+    unite(Methylated, Methylated_hypo, Methylated_hyper, sep = "/", na.rm = TRUE) %>% 
+    unite(Methylated.Padj, P.adjust_hypo, P.adjust_hyper, sep = "/", na.rm = TRUE)
+  })
 
-
+  return(rs)
+}

@@ -152,12 +152,17 @@ if __name__ == "__main__":
     tm_df.columns = ['gene', 'TM.type', 'TM.Support', 'TM.Confidence', 'TM.Lift', 'TM.Count']
     result_combine_tm = pd.merge(left=result_combine, right=tm_df, on="gene", how='left')
     print("Textmining Combine Finished!")
+    
+    # ELMER
+    elmer_rs = elmer(df=result_combine_tm, cancer_type=CANCER_TYPE, base_dir=os.getcwd())
+    result_combine_elmer = pd.merge(left=result_combine_tm, right=elmer_rs, left_on="gene", right_on="gene", how='left')
+    print("Methylation analysis Finished!!")
 
     # DGIdb
-    gene_list = result_combine_tm.loc[:, 'gene'].to_list()
+    gene_list = result_combine_elmer.loc[:, 'gene'].to_list()
     dgidb_df = dgidb_extract(gene_list, True)
     dgidb_df.columns = ['gene', 'DGI.Gene Category', 'DGI.DrugName;Score;Type', 'DGI.Count']
-    result_combine_dgidb = pd.merge(left=result_combine_tm, right=dgidb_df, on='gene', how='left')
+    result_combine_dgidb = pd.merge(left=result_combine_elmer, right=dgidb_df, on='gene', how='left')
     print("DGIdb Combine Finished!")
 
     # PDBid
@@ -168,7 +173,7 @@ if __name__ == "__main__":
     print("PDBid Combine Finished!")
 
     # OncoKB
-    oncokb_curated_df = oncokb_allcuratedGenes(RAW_PATH)
+    oncokb_curated_df = oncokb_allcuratedGenes()
     oncokb_curated_df.columns = ['gene', 'OncoKB.Is Oncogene', 'OncoKB.Is TSG', 
                       'OncoKB.Highest Level of Evidence(sensitivity)',
                       'OncoKB.Highest Level of Evidence(resistance)',

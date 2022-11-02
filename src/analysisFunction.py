@@ -1195,6 +1195,20 @@ def impute_function(omics):
     
     return omics
 
+def elmer(df, cancer_type, base_dir):
+    r = ro.r
+    r['source']('src/r-function.R')
+    methylation_analysis = ro.globalenv['methylation_analysis']
+
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        df_r = ro.conversion.py2rpy(df.iloc[:, :1])
+
+    tmp = methylation_analysis(df_r, cancer_type, "both", base_dir)
+
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        rs = ro.conversion.rpy2py(tmp)
+    return rs
+    
 if __name__ == "__main__": 
     print("not main")
     
